@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RESPAWNX — Counter POS & PS5 Station Manager</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Orbitron (Cyberpunk Headers) + Inter (UI) + JetBrains Mono (Timers) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Orbitron', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            obsidian: '#07090e',
+            panel: '#0d111a',
+            psblue: '#0070d1',
+            neoncyan: '#00f0ff',
+            neonpurple: '#8b5cf6',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #07090e;
+      background-image: 
+        radial-gradient(circle at 12% 15%, rgba(0, 112, 209, 0.14) 0%, transparent 35%),
+        radial-gradient(circle at 88% 20%, rgba(139, 92, 246, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 50% 90%, rgba(0, 240, 255, 0.07) 0%, transparent 45%);
+      color: #f1f5f9;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Glassmorphic Card Styles */
+    .glass-panel {
+      background: rgba(13, 17, 26, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Status Glow Borders */
+    .station-idle {
+      border-color: rgba(16, 185, 129, 0.35);
+      box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.12);
+    }
+    .station-active {
+      border-color: rgba(0, 240, 255, 0.5);
+      box-shadow: 0 10px 35px -8px rgba(0, 112, 209, 0.3);
+    }
+    .station-warning {
+      border-color: rgba(245, 158, 11, 0.85);
+      box-shadow: 0 0 28px rgba(245, 158, 11, 0.35);
+      animation: pulseWarning 2s infinite ease-in-out;
+    }
+    .station-overdue {
+      border-color: rgba(239, 68, 68, 0.95);
+      box-shadow: 0 0 35px rgba(239, 68, 68, 0.55);
+      animation: pulseOverdue 1s infinite ease-in-out;
+    }
+    .station-paused {
+      border-color: rgba(168, 85, 247, 0.65);
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.25);
+    }
+
+    @keyframes pulseWarning {
+      0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.25); }
+      50% { box-shadow: 0 0 32px rgba(245, 158, 11, 0.6); }
+    }
+
+    @keyframes pulseOverdue {
+      0%, 100% { box-shadow: 0 0 18px rgba(239, 68, 68, 0.35); border-color: rgba(239, 68, 68, 0.6); }
+      50% { box-shadow: 0 0 42px rgba(239, 68, 68, 0.85); border-color: rgba(239, 68, 68, 1); }
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #07090e;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+
+    .ps-shapes-bg {
+      background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+  </style>
+</head>
+<body class="ps-shapes-bg antialiased selection:bg-cyan-500 selection:text-slate-950">
+
+  <!-- TOP NOTIFICATION BANNER / TOAST CONTAINER -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+  <!-- MAIN WRAPPER -->
+  <div class="max-w-[1600px] mx-auto px-3 sm:px-6 py-4 space-y-6">
+
+    <!-- HEADER & BRAND BAR -->
+    <header class="glass-panel rounded-2xl p-4 sm:p-5 border border-slate-800/80 shadow-2xl">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        
+        <!-- Brand Logo & Address -->
+        <div class="flex items-center gap-3.5">
+          <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-400 p-[2px] shadow-lg shadow-blue-500/30 flex-shrink-0">
+            <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+              <i class="fa-brands fa-playstation text-2xl sm:text-3xl text-cyan-400"></i>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <h1 class="font-display text-xl sm:text-2xl font-black tracking-wider bg-gradient-to-r from-white via-cyan-300 to-blue-400 bg-clip-text text-transparent">
+                RESPAWN<span class="text-cyan-400">X</span>
+              </h1>
+              <span class="text-[11px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                Counter POS v2.5
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+              <i class="fa-solid fa-location-dot text-cyan-400"></i>
+              Marian Paradise, 2nd Floor, Bikarnakatte, Mangaluru • 4× PS5 4K HDR Lounge
+            </p>
+          </div>
+        </div>
+
+        <!-- Right Controls: Live Clock, Audio Chime, Demo Loader, Rate Card -->
+        <div class="flex flex-wrap items-center justify-between lg:justify-end gap-2.5 sm:gap-3">
+          
+          <!-- Live Clock -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2 flex items-center gap-3">
+            <i class="fa-regular fa-clock text-cyan-400 text-lg"></i>
+            <div>
+              <div id="liveClockTime" class="font-mono text-sm sm:text-base font-bold text-white leading-tight">--:--:--</div>
+              <div id="liveClockDate" class="text-[11px] text-slate-400 leading-tight">Loading date...</div>
+            </div>
+          </div>
+
+          <!-- Audio Toggle & Test Button -->
+          <div class="flex items-center bg-slate-900/90 border border-slate-800 rounded-xl p-1">
+            <button id="btnAudioToggle" onclick="toggleAudioMute()" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <i id="iconAudio" class="fa-solid fa-volume-high"></i>
+              <span id="textAudio">Alerts ON</span>
+            </button>
+            <button onclick="playTestSound()" title="Test Alert Chime" class="px-2.5 py-1.5 rounded-lg text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition">
+              <i class="fa-solid fa-bell"></i> Test
+            </button>
+          </div>
+
+          <!-- Rate Card Modal Button -->
+          <button onclick="openRateCardModal()" class="px-3.5 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-2 transition">
+            <i class="fa-solid fa-tags text-cyan-400"></i>
+            <span>Rate Card</span>
+          </button>
+
+          <!-- Demo State Button -->
+          <button onclick="loadDemoSessions()" class="px-3.5 py-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold flex items-center gap-1.5 transition" title="Populate demo active timers to preview busy counter">
+            <i class="fa-solid fa-bolt text-amber-400"></i>
+            <span>Demo Busy State</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 LIVE KPI SUMMARY CARDS -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-800/80">
+        
+        <!-- KPI 1: Active Stations -->
+        <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-3.5 flex items-center justify-between">
+          <div>
+            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Active Stations</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span id="kpiActiveCount" class="font-display text-2xl sm:text-3xl font-extrabold text-white">0 / 4</span>
+              <span id="kpiActivePlayers" class="text-xs font-semibold text-cyan-400">0 Players Live</span>
+            </div>
+          </div>
+          <div class="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-xl">
+            <i class="fa-solid fa-gamepad"></i>
+          </div>
+        </div>
+
+        <!-- KPI 2: Live Running Tab (Unbilled) -->
+        <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-3.5 flex items-center justify-between">
+          <div>
+            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Live Running Tab</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span id="kpiLiveRunningRevenue" class="font-display text-2xl sm:text-3xl font-extrabold text-amber-400">₹0</span>
+              <span class="text-xs text-slate-400">in progress</span>
+            </div>
+          </div>
+          <div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-xl">
+            <i class="fa-solid fa-hourglass-half"></i>
+          </div>
+        </div>
+
+        <!-- KPI 3: Today's Collected Revenue -->
+        <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-3.5 flex items-center justify-between">
+          <div>
+            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Today's Revenue</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span id="kpiTodayRevenue" class="font-display text-2xl sm:text-3xl font-extrabold text-emerald-400">₹0</span>
+            </div>
+            <div id="kpiPaymentSplit" class="text-[11px] text-slate-400 mt-0.5">UPI: ₹0 • Cash: ₹0</div>
+          </div>
+          <div class="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl">
+            <i class="fa-solid fa-indian-rupee-sign"></i>
+          </div>
+        </div>
+
+        <!-- KPI 4: Completed Sessions & Queue -->
+        <div class="bg-slate-900/70 border border-slate-800/90 rounded-xl p-3.5 flex items-center justify-between">
+          <div>
+            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Sessions & Queue</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span id="kpiCompletedSessions" class="font-display text-2xl sm:text-3xl font-extrabold text-purple-400">0</span>
+              <span class="text-xs text-slate-400">completed</span>
+            </div>
+            <div class="text-[11px] text-cyan-400 mt-0.5 cursor-pointer hover:underline" onclick="switchBottomTab('queue')">
+              <i class="fa-solid fa-users-line mr-1"></i><span id="kpiQueueCount">0 waiting in queue</span>
+            </div>
+          </div>
+          <div class="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-xl">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- 4 PS5 STATIONS LIVE GRID -->
+    <section>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2.5">
+          <h2 class="font-display text-base sm:text-lg font-bold tracking-wide text-white flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+            LIVE PS5 FLOOR TERMINALS (4 STATIONS)
+          </h2>
+        </div>
+        <div class="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Available</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> In Session</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> &lt; 5m Warning</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> Time Up / Overtime</span>
+        </div>
+      </div>
+
+      <!-- STATIONS CONTAINER (Rendered dynamically by JS) -->
+      <div id="stationsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
+        <!-- Populated via renderStations() -->
+      </div>
+    </section>
+
+    <!-- BOTTOM SECTION: DAILY REVENUE LEDGER & WALK-IN WAITING QUEUE -->
+    <section class="glass-panel rounded-2xl border border-slate-800/90 overflow-hidden shadow-xl">
+      
+      <!-- Tabs Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-900/80 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <button id="tabBtnLedger" onclick="switchBottomTab('ledger')" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20">
+            <i class="fa-solid fa-receipt"></i>
+            <span>Today's Revenue Ledger</span>
+            <span id="badgeLedgerCount" class="px-2 py-0.5 rounded-full text-[11px] bg-slate-950/20 text-slate-950 font-extrabold">0</span>
+          </button>
+          <button id="tabBtnQueue" onclick="switchBottomTab('queue')" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition bg-slate-800/80 text-slate-300 hover:text-white">
+            <i class="fa-solid fa-user-clock"></i>
+            <span>Walk-In Waiting Queue</span>
+            <span id="badgeQueueCount" class="px-2 py-0.5 rounded-full text-[11px] bg-cyan-500/20 text-cyan-300 font-extrabold">0</span>
+          </button>
+        </div>
+
+        <!-- Ledger Action Buttons -->
+        <div id="ledgerActions" class="flex flex-wrap items-center gap-2">
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input id="ledgerSearchInput" oninput="renderLedger()" type="text" placeholder="Search customer, game, station..." class="pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500" />
+          </div>
+          <button onclick="exportLedgerCSV()" class="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-file-csv"></i>
+            <span>Export CSV</span>
+          </button>
+          <button onclick="openResetLedgerModal()" class="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 text-xs font-semibold flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-trash-can"></i>
+            <span>Clear Day</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 1 CONTENT: DAILY SESSION LEDGER -->
+      <div id="tabContentLedger" class="p-4">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
+                <th class="py-3 px-3">Time</th>
+                <th class="py-3 px-3">Station</th>
+                <th class="py-3 px-3">Customer & Game</th>
+                <th class="py-3 px-3">Players</th>
+                <th class="py-3 px-3">Duration</th>
+                <th class="py-3 px-3">Gaming</th>
+                <th class="py-3 px-3">Snacks</th>
+                <th class="py-3 px-3">Advance</th>
+                <th class="py-3 px-3">Net Paid</th>
+                <th class="py-3 px-3">Method</th>
+                <th class="py-3 px-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerTableBody" class="divide-y divide-slate-800/60 text-xs sm:text-sm">
+              <!-- Populated by renderLedger() -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 2 CONTENT: WALK-IN WAITING QUEUE -->
+      <div id="tabContentQueue" class="p-4 hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Add to Queue Form -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3 h-fit">
+            <h3 class="font-display text-sm font-bold text-cyan-400 flex items-center gap-2">
+              <i class="fa-solid fa-user-plus"></i> Add Walk-In / Slot Booking
+            </h3>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Customer Name *</label>
+              <input id="queueName" type="text" placeholder="e.g. Karthik Shetty" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500" />
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Phone (Optional)</label>
+                <input id="queuePhone" type="text" placeholder="9876543210" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Players</label>
+                <select id="queuePlayers" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500">
+                  <option value="1">1 Player (Solo)</option>
+                  <option value="2" selected>2 Players (Duo)</option>
+                  <option value="3">3 Players (Trio)</option>
+                  <option value="4">4 Players (Squad)</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Duration Wanted</label>
+                <select id="queueDuration" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500">
+                  <option value="30">30 Mins</option>
+                  <option value="60" selected>1 Hour</option>
+                  <option value="90">1.5 Hours</option>
+                  <option value="120">2 Hours</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Preferred Game</label>
+                <input id="queueNotes" type="text" placeholder="FC 26 / GTA VI / WWE" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500" />
+              </div>
+            </div>
+            <label class="flex items-center gap-2 text-xs text-slate-300 pt-1 cursor-pointer">
+              <input id="queueAdvance" type="checkbox" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-0" />
+              <span>Online ₹20/player Advance Paid</span>
+            </label>
+            <button onclick="addQueueItem()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-cyan-500/20">
+              <i class="fa-solid fa-plus mr-1"></i> Add to Waiting Queue
+            </button>
+          </div>
+
+          <!-- Waiting Queue List -->
+          <div class="lg:col-span-2">
+            <div id="queueListContainer" class="space-y-2.5">
+              <!-- Populated by renderQueue() -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- NOVAFORGE STUDIOS CYBERPUNK DEVELOPER CREDIT FOOTER                   -->
+    <!-- ===================================================================== -->
+    <footer class="glass-panel rounded-2xl p-4 sm:px-6 sm:py-4 border border-slate-800/90 shadow-xl mt-6 relative overflow-hidden">
+      <!-- Subtle top gradient line -->
+      <div class="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/50 to-purple-500/50"></div>
+
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+        
+        <!-- Left Side: Lounge Terminal Info -->
+        <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="font-display text-xs font-bold tracking-wider text-slate-200">
+              RESPAWN<span class="text-cyan-400">X</span> GAMING LOUNGE
+            </span>
+          </div>
+          <span class="hidden sm:inline text-slate-700">•</span>
+          <span class="text-[11px] font-medium uppercase tracking-widest text-slate-400">
+            Bikarnakatte, Mangaluru
+          </span>
+          <span class="hidden sm:inline text-slate-700">•</span>
+          <span class="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-900 text-cyan-400 border border-slate-800">
+            COUNTER POS TERMINAL v1.0
+          </span>
+        </div>
+
+        <!-- Right Side: NovaForge Studios Prominent Badge & Quick Social Links -->
+        <div class="flex flex-wrap items-center justify-center gap-2.5">
+          <a
+            href="https://kaushalkotian19.github.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="group relative inline-flex items-center gap-2.5 px-4 py-2 rounded-xl bg-slate-950/90 hover:bg-slate-900 border border-cyan-500/30 hover:border-cyan-400 transition-all duration-300 shadow-lg hover:shadow-cyan-500/20"
+          >
+            <span class="w-6 h-6 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center text-slate-950 text-xs font-black shadow-sm group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-bolt"></i>
+            </span>
+            <span class="text-xs text-slate-300">
+              Designed &amp; Engineered by
+              <strong class="font-display tracking-wide bg-gradient-to-r from-cyan-300 via-blue-400 to-purple-400 bg-clip-text text-transparent group-hover:from-cyan-200 group-hover:to-purple-300 font-extrabold ml-0.5">
+                NovaForge Studios
+              </strong>
+              <span class="text-[11px] text-slate-400 font-normal ml-1">(Kaushal Kotian)</span>
+            </span>
+            <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-cyan-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"></i>
+          </a>
+
+          <!-- Subtle Developer Social Pills -->
+          <div class="flex items-center gap-1.5">
+            <a
+              href="https://github.com/Kaushalkotian19"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="GitHub @Kaushalkotian19"
+              class="w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 text-slate-400 hover:text-cyan-300 flex items-center justify-center text-xs transition-all"
+            >
+              <i class="fa-brands fa-github"></i>
+            </a>
+            <a
+              href="https://instagram.com/mr_kaushal_kotian"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Instagram @mr_kaushal_kotian"
+              class="w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/50 text-slate-400 hover:text-purple-400 flex items-center justify-center text-xs transition-all"
+            >
+              <i class="fa-brands fa-instagram"></i>
+            </a>
+            <a
+              href="https://x.com/kaush06060"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="X (Twitter) @kaush06060"
+              class="w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-cyan-400/50 text-slate-400 hover:text-white flex items-center justify-center text-xs transition-all"
+            >
+              <i class="fa-brands fa-x-twitter"></i>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 1: CHECKOUT & BILLING RECEIPT MODAL                             -->
+  <!-- ===================================================================== -->
+  <div id="checkoutModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="glass-panel border border-cyan-500/40 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 my-8">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <span id="checkoutStationBadge" class="text-[11px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300">PS5-01</span>
+          <h3 class="font-display text-lg sm:text-xl font-bold text-white mt-1">Session Checkout & Billing</h3>
+        </div>
+        <button onclick="closeCheckoutModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Session Details Summary -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2 text-xs sm:text-sm">
+        <div class="flex justify-between">
+          <span class="text-slate-400">Customer / Tag:</span>
+          <span id="coCustomer" class="font-semibold text-white">Walk-in Player</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Game Played:</span>
+          <span id="coGame" class="font-semibold text-cyan-300">EA Sports FC 26</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Players Count:</span>
+          <span id="coPlayers" class="font-semibold text-white">2 Players (Duo)</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Time Span:</span>
+          <span id="coTimeSpan" class="font-mono text-xs text-slate-300">06:00 PM → 07:00 PM</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Total Billable Duration:</span>
+          <span id="coDuration" class="font-mono font-bold text-amber-400">60 Mins</span>
+        </div>
+      </div>
+
+      <!-- Itemized Charges Breakdown -->
+      <div class="bg-slate-950/90 border border-slate-800/90 rounded-xl p-4 space-y-2.5 text-sm">
+        <div class="flex justify-between items-center">
+          <div>
+            <span class="text-slate-300">Gaming Charge</span>
+            <p id="coPricingFormula" class="text-[11px] text-slate-500">RESPAWNX Slab: ₹70/hr × 2P</p>
+          </div>
+          <span id="coGamingFee" class="font-mono font-bold text-white">₹140</span>
+        </div>
+
+        <div class="flex justify-between items-center">
+          <div>
+            <span class="text-slate-300">Snacks & Drinks Add-ons</span>
+            <p id="coSnacksList" class="text-[11px] text-slate-500">None added</p>
+          </div>
+          <span id="coSnacksFee" class="font-mono font-bold text-amber-400">+₹0</span>
+        </div>
+
+        <div class="flex justify-between items-center">
+          <label class="flex items-center gap-2 text-slate-300 cursor-pointer">
+            <input id="coAdvanceCheckbox" type="checkbox" onchange="recalculateCheckoutModal()" class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0" />
+            <span>Online Advance Paid (₹20 × P)</span>
+          </label>
+          <span id="coAdvanceFee" class="font-mono font-bold text-emerald-400">-₹0</span>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+          <div>
+            <span class="font-display text-sm font-bold text-cyan-400 uppercase">Final Payable Bill (₹)</span>
+            <p class="text-[11px] text-slate-400">Editable for discount / rounding</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-mono text-lg font-bold text-emerald-400">₹</span>
+            <input id="coFinalAmountInput" type="number" min="0" step="10" class="w-28 px-3 py-1.5 rounded-xl bg-slate-900 border border-cyan-500/50 font-mono text-xl font-extrabold text-emerald-400 text-right focus:outline-none focus:border-cyan-400" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Method Selector -->
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Select Payment Mode</label>
+        <div class="grid grid-cols-3 gap-2.5">
+          <button type="button" id="payBtnUPI" onclick="selectPaymentMode('UPI')" class="py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-cyan-500/20 border-cyan-400 text-cyan-300">
+            <i class="fa-solid fa-qrcode"></i> UPI / QR
+          </button>
+          <button type="button" id="payBtnCASH" onclick="selectPaymentMode('CASH')" class="py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-slate-900 border-slate-800 text-slate-400 hover:text-white">
+            <i class="fa-solid fa-money-bill-wave"></i> CASH
+          </button>
+          <button type="button" id="payBtnSPLIT" onclick="selectPaymentMode('SPLIT')" class="py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-slate-900 border-slate-800 text-slate-400 hover:text-white">
+            <i class="fa-solid fa-arrows-split-up-and-left"></i> SPLIT
+          </button>
+        </div>
+      </div>
+
+      <!-- UPI QR Scanner Box (Toggles when UPI selected) -->
+      <div id="upiQrBox" class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl bg-white p-1 flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-qrcode text-slate-950 text-3xl"></i>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-white">RESPAWNX Official UPI</div>
+            <div class="font-mono text-xs text-cyan-400 select-all">kaushalkotian19@okicici</div>
+            <div class="text-[11px] text-slate-400">GPay • PhonePe • Paytm • FamPay</div>
+          </div>
+        </div>
+        <button onclick="copyUpiId()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700">
+          <i class="fa-regular fa-copy mr-1"></i>Copy
+        </button>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button onclick="closeCheckoutModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+          Keep Playing
+        </button>
+        <button onclick="confirmAndCompleteCheckout()" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-display font-extrabold text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>Collect Payment & Free Station</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 2: SNACKS / DRINKS & EXTRA ADD-ONS MODAL                        -->
+  <!-- ===================================================================== -->
+  <div id="snacksModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="glass-panel border border-amber-500/40 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-display text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-bottle-water text-amber-400"></i>
+          <span>Add Snacks / Drinks — <span id="snackModalStationTitle" class="text-cyan-400">PS5-01</span></span>
+        </h3>
+        <button onclick="closeSnacksModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Quick Preset Add-on Buttons -->
+      <div class="grid grid-cols-2 gap-2.5">
+        <button onclick="addSnackToStation('Mineral Water', 20)" class="p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 text-left transition flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-white">Water Bottle</div>
+            <div class="text-[11px] text-slate-400">Chilled 1L / 500ml</div>
+          </div>
+          <span class="font-mono text-xs font-bold text-amber-400">+₹20</span>
+        </button>
+        <button onclick="addSnackToStation('Soft Drink / Soda', 40)" class="p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 text-left transition flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-white">Cold Drink</div>
+            <div class="text-[11px] text-slate-400">Coke / Pepsi / Sprite</div>
+          </div>
+          <span class="font-mono text-xs font-bold text-amber-400">+₹40</span>
+        </button>
+        <button onclick="addSnackToStation('Chips / Nachos', 30)" class="p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 text-left transition flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-white">Chips / Crisps</div>
+            <div class="text-[11px] text-slate-400">Lays / Doritos</div>
+          </div>
+          <span class="font-mono text-xs font-bold text-amber-400">+₹30</span>
+        </button>
+        <button onclick="addSnackToStation('Red Bull / Monster', 125)" class="p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 text-left transition flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-white">Energy Drink</div>
+            <div class="text-[11px] text-slate-400">Red Bull / Monster</div>
+          </div>
+          <span class="font-mono text-xs font-bold text-amber-400">+₹125</span>
+        </button>
+      </div>
+
+      <!-- Custom Add-on Input -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 space-y-2">
+        <div class="text-xs font-semibold text-slate-400">Custom Item / Extra Controller</div>
+        <div class="flex gap-2">
+          <input id="customSnackName" type="text" placeholder="Item name" class="flex-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white" />
+          <input id="customSnackPrice" type="number" placeholder="₹ Price" class="w-24 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white" />
+          <button onclick="addCustomSnack()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs">
+            Add
+          </button>
+        </div>
+      </div>
+
+      <!-- Current Station Snacks List -->
+      <div>
+        <div class="text-xs font-semibold text-slate-400 mb-1.5">Current Station Tab Items:</div>
+        <div id="currentStationSnacksList" class="space-y-1.5 max-h-36 overflow-y-auto text-xs">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button onclick="closeSnacksModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 3: OFFICIAL RESPAWNX RATE CARD MODAL                            -->
+  <!-- ===================================================================== -->
+  <div id="rateCardModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="glass-panel border border-cyan-500/40 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300">Official Tariff</span>
+          <h3 class="font-display text-lg font-bold text-white mt-1">RESPAWNX PS5 Rate Card</h3>
+        </div>
+        <button onclick="closeRateCardModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="overflow-hidden rounded-xl border border-slate-800">
+        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+          <thead>
+            <tr class="bg-slate-900 text-slate-300 border-b border-slate-800">
+              <th class="p-3">Players</th>
+              <th class="p-3">30 Mins</th>
+              <th class="p-3">1 Hour</th>
+              <th class="p-3">1.5 Hours</th>
+              <th class="p-3">2 Hours</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/80 bg-slate-950/60 font-mono">
+            <tr>
+              <td class="p-3 font-sans font-bold text-cyan-400">1P (Solo)</td>
+              <td class="p-3">₹40</td>
+              <td class="p-3 text-emerald-400 font-bold">₹70</td>
+              <td class="p-3">₹110</td>
+              <td class="p-3">₹140</td>
+            </tr>
+            <tr>
+              <td class="p-3 font-sans font-bold text-blue-400">2P (Duo)</td>
+              <td class="p-3">₹80</td>
+              <td class="p-3 text-emerald-400 font-bold">₹140</td>
+              <td class="p-3">₹220</td>
+              <td class="p-3">₹280</td>
+            </tr>
+            <tr>
+              <td class="p-3 font-sans font-bold text-purple-400">3P (Trio)</td>
+              <td class="p-3">₹120</td>
+              <td class="p-3 text-emerald-400 font-bold">₹210</td>
+              <td class="p-3">₹330</td>
+              <td class="p-3">₹420</td>
+            </tr>
+            <tr>
+              <td class="p-3 font-sans font-bold text-amber-400">4P (Squad)</td>
+              <td class="p-3">₹160</td>
+              <td class="p-3 text-emerald-400 font-bold">₹280</td>
+              <td class="p-3">₹440</td>
+              <td class="p-3">₹560</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 space-y-1">
+        <p><i class="fa-solid fa-circle-info text-cyan-400 mr-1.5"></i><strong>Formula:</strong> Every 1 Hour = <strong>₹70 / player</strong> | Every 30 Mins = <strong>₹40 / player</strong>.</p>
+        <p><i class="fa-solid fa-check-circle text-emerald-400 mr-1.5"></i><strong>Online Booking Advance:</strong> ₹20 per player is deducted automatically at checkout when toggled.</p>
+      </div>
+
+      <div class="flex justify-end">
+        <button onclick="closeRateCardModal()" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs">
+          Got It
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL 4: CONFIRM CLEAR DAY LEDGER                                     -->
+  <!-- ===================================================================== -->
+  <div id="resetLedgerModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="glass-panel border border-red-500/40 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center mx-auto text-xl">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 class="font-display text-base font-bold text-white">Clear Today's Revenue Ledger?</h3>
+      <p class="text-xs text-slate-400">This will permanently remove all completed session records from today's table. Tip: Export CSV first if you want a backup.</p>
+      <div class="flex gap-2.5 pt-2">
+        <button onclick="closeResetLedgerModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancel</button>
+        <button onclick="confirmClearLedger()" class="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-400 text-slate-950 text-xs font-bold">Yes, Clear All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- APPLICATION JAVASCRIPT                                                -->
+  <!-- ===================================================================== -->
+  <script>
+    /*************************************************************************
+     * 1. CONSTANTS, GAMES LIST & STORAGE KEYS
+     *************************************************************************/
+    const STORAGE_KEY_STATIONS = 'respawnx_pos_stations_v2';
+    const STORAGE_KEY_LEDGER   = 'respawnx_pos_ledger_v2';
+    const STORAGE_KEY_QUEUE    = 'respawnx_pos_queue_v2';
+
+    const PS5_GAMES = [
+      'GTA VI / GTA Online',
+      'EA Sports FC 26 (FIFA)',
+      'Mortal Kombat 1',
+      'WWE 2K25',
+      'God of War Ragnarök',
+      'Marvel\'s Spider-Man 2',
+      'Rocket League',
+      'It Takes Two (Co-Op)',
+      'Minecraft PS5',
+      'Call of Duty: Black Ops III',
+      'Call of Duty: Black Ops 6',
+      'Tekken 8',
+      'Gran Turismo 7',
+      'Other / Customer Disc'
+    ];
+
+    // State variables
+    let stations = [];
+    let ledger = [];
+    let waitingQueue = [];
+    let audioMuted = false;
+    let activeCheckoutStationId = null;
+    let activeSnackStationId = null;
+    let selectedPaymentMode = 'UPI';
+
+    // Draft form state for idle stations so live typing isn't lost on tick
+    const idleFormDrafts = {
+      1: { customerName: '', game: PS5_GAMES[0], players: 2, mode: 'countdown', durationMins: 60, advancePaid: false },
+      2: { customerName: '', game: PS5_GAMES[1], players: 1, mode: 'countdown', durationMins: 60, advancePaid: false },
+      3: { customerName: '', game: PS5_GAMES[2], players: 2, mode: 'countdown', durationMins: 60, advancePaid: false },
+      4: { customerName: '', game: PS5_GAMES[3], players: 4, mode: 'countdown', durationMins: 60, advancePaid: false }
+    };
+
+    /*************************************************************************
+     * 2. SYNTHESIZED WEB AUDIO API CHIMES (ZERO EXTERNAL FILES)
+     *************************************************************************/
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) audioCtx = new AudioContextClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playSound(type) {
+      if (audioMuted) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+
+        const now = ctx.currentTime;
+
+        if (type === 'start') {
+          // Futuristic PS5 power-on chord
+          const freqs = [440, 554.37, 659.25, 880];
+          freqs.forEach((f, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, now + idx * 0.06);
+            gain.gain.setValueAtTime(0.08, now + idx * 0.06);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.45);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + idx * 0.06);
+            osc.stop(now + idx * 0.06 + 0.45);
+          });
+        } else if (type === 'warning') {
+          // 5-Minute Left two-tone soft chime
+          [587.33, 880].forEach((f, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(f, now + idx * 0.18);
+            gain.gain.setValueAtTime(0.14, now + idx * 0.18);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.18 + 0.4);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + idx * 0.18);
+            osc.stop(now + idx * 0.18 + 0.4);
+          });
+        } else if (type === 'timeup') {
+          // Urgent triple pulse alarm
+          [0, 0.22, 0.44].forEach((offset) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(784, now + offset);
+            osc.frequency.setValueAtTime(987.77, now + offset + 0.1);
+            gain.gain.setValueAtTime(0.12, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.2);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + offset);
+            osc.stop(now + offset + 0.2);
+          });
+        } else if (type === 'cash') {
+          // Cash register success ring
+          [1046.5, 1318.5, 1567.98].forEach((f, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, now + idx * 0.07);
+            gain.gain.setValueAtTime(0.12, now + idx * 0.07);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.5);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + idx * 0.07);
+            osc.stop(now + idx * 0.07 + 0.5);
+          });
+        }
+      } catch (e) {
+        console.warn('Audio play blocked or unsupported', e);
+      }
+    }
+
+    function toggleAudioMute() {
+      audioMuted = !audioMuted;
+      const btn = document.getElementById('btnAudioToggle');
+      const icon = document.getElementById('iconAudio');
+      const txt = document.getElementById('textAudio');
+      if (audioMuted) {
+        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition bg-red-500/20 text-red-300 border border-red-500/30';
+        icon.className = 'fa-solid fa-volume-xmark';
+        txt.textContent = 'Muted';
+      } else {
+        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        icon.className = 'fa-solid fa-volume-high';
+        txt.textContent = 'Alerts ON';
+        playSound('start');
+      }
+    }
+
+    function playTestSound() {
+      if (audioMuted) toggleAudioMute();
+      playSound('warning');
+      showToast('Audio Alert Test: 5-Minute Warning & Time-Up Chimes Ready!', 'info');
+    }
+
+    /*************************************************************************
+     * 3. SMART PRICING ENGINE (EXACT RESPAWNX RATES)
+     * 1P: ₹40/30m, ₹70/1hr
+     * Formula: Every full 60m = ₹70 * players; remaining 30m slab = ₹40 * players
+     *************************************************************************/
+    function calculateGamingCharge(minutes, players) {
+      const safeMins = Math.max(1, Math.round(minutes));
+      // Round up to nearest 15-minute or 30-minute slab for fair counter billing:
+      // Exact slabs:
+      // <= 35 mins -> 30m slab (₹40 * players)
+      // 36 to 65 mins -> 1 hr slab (₹70 * players)
+      // For arbitrary durations, split into hours and 30-min blocks:
+      const blocksOf30 = Math.max(1, Math.ceil((safeMins - 5) / 30)); // 5-min grace period
+      const fullHours = Math.floor(blocksOf30 / 2);
+      const remHalfHour = blocksOf30 % 2;
+      return (fullHours * 70 * players) + (remHalfHour * 40 * players);
+    }
+
+    function calculateSnacksTotal(snacks = []) {
+      return snacks.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+    }
+
+    /*************************************************************************
+     * 4. INITIALIZATION & LOCALSTORAGE PERSISTENCE
+     *************************************************************************/
+    function createDefaultStations() {
+      return [1, 2, 3, 4].map(id => ({
+        id,
+        name: `PS5-0${id}`,
+        tvSpec: '43" 4K UHD HDR • DualSense',
+        status: 'IDLE', // 'IDLE' | 'ACTIVE' | 'PAUSED'
+        customerName: '',
+        game: PS5_GAMES[id - 1],
+        players: 2,
+        mode: 'countdown', // 'countdown' | 'stopwatch'
+        targetMinutes: 60,
+        startTime: null,
+        pausedAt: null,
+        totalPausedMs: 0,
+        advancePaid: false,
+        snacks: [],
+        warned5Min: false,
+        warnedTimeUp: false
+      }));
+    }
+
+    function loadStateFromStorage() {
+      try {
+        const savedStations = localStorage.getItem(STORAGE_KEY_STATIONS);
+        stations = savedStations ? JSON.parse(savedStations) : createDefaultStations();
+      } catch (e) {
+        stations = createDefaultStations();
+      }
+
+      try {
+        const savedLedger = localStorage.getItem(STORAGE_KEY_LEDGER);
+        ledger = savedLedger ? JSON.parse(savedLedger) : [];
+      } catch (e) {
+        ledger = [];
+      }
+
+      try {
+        const savedQueue = localStorage.getItem(STORAGE_KEY_QUEUE);
+        waitingQueue = savedQueue ? JSON.parse(savedQueue) : [];
+      } catch (e) {
+        waitingQueue = [];
+      }
+    }
+
+    function saveStations() {
+      localStorage.setItem(STORAGE_KEY_STATIONS, JSON.stringify(stations));
+    }
+
+    function saveLedger() {
+      localStorage.setItem(STORAGE_KEY_LEDGER, JSON.stringify(ledger));
+    }
+
+    function saveQueue() {
+      localStorage.setItem(STORAGE_KEY_QUEUE, JSON.stringify(waitingQueue));
+    }
+
+    /*************************************************************************
+     * 5. TIME HELPERS & LIVE ENGINE
+     *************************************************************************/
+    function getStationElapsedMs(st) {
+      if (st.status === 'IDLE' || !st.startTime) return 0;
+      const now = st.status === 'PAUSED' && st.pausedAt ? st.pausedAt : Date.now();
+      return Math.max(0, now - st.startTime - (st.totalPausedMs || 0));
+    }
+
+    function formatHMS(ms) {
+      const totalSeconds = Math.floor(Math.abs(ms) / 1000);
+      const hrs = Math.floor(totalSeconds / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      const secs = totalSeconds % 60;
+      const pad = n => String(n).padStart(2, '0');
+      if (hrs > 0) {
+        return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+      }
+      return `${pad(mins)}:${pad(secs)}`;
+    }
+
+    function formatClockTime(timestamp) {
+      if (!timestamp) return '--:--';
+      return new Date(timestamp).toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+
+    /*************************************************************************
+     * 6. RENDER 4 PS5 STATIONS GRID
+     *************************************************************************/
+    function renderStations() {
+      const container = document.getElementById('stationsGrid');
+      if (!container) return;
+
+      container.innerHTML = stations.map(st => {
+        if (st.status === 'IDLE') {
+          const draft = idleFormDrafts[st.id] || {
+            customerName: '',
+            game: PS5_GAMES[0],
+            players: 2,
+            mode: 'countdown',
+            durationMins: 60,
+            advancePaid: false
+          };
+          const previewPrice = draft.mode === 'stopwatch'
+            ? `${draft.players * 70}/hr`
+            : `₹${calculateGamingCharge(draft.durationMins, draft.players)}`;
+
+          return `
+            <div class="glass-panel station-idle rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all duration-300">
+              <!-- Card Top Header -->
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-3">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-display font-bold text-sm">
+                      0${st.id}
+                    </div>
+                    <div>
+                      <h3 class="font-display text-base font-extrabold text-white tracking-wide">${st.name}</h3>
+                      <p class="text-[11px] text-slate-400">${st.tvSpec}</p>
+                    </div>
+                  </div>
+                  <span class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Available
+                  </span>
+                </div>
+
+                <!-- Quick Check-In Form -->
+                <div class="space-y-3 mt-3 pt-3 border-t border-slate-800/80">
+                  
+                  <!-- Customer Name Input -->
+                  <div>
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Customer Name / Tag</label>
+                    <input
+                      type="text"
+                      value="${escapeHtml(draft.customerName)}"
+                      oninput="updateIdleDraft(${st.id}, 'customerName', this.value)"
+                      placeholder="Walk-in Player (Optional)"
+                      class="w-full px-3 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                    />
+                  </div>
+
+                  <!-- Game Selector -->
+                  <div>
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Select PS5 Game</label>
+                    <select
+                      onchange="updateIdleDraft(${st.id}, 'game', this.value)"
+                      class="w-full px-3 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-400"
+                    >
+                      ${PS5_GAMES.map(g => `<option value="${escapeHtml(g)}" ${draft.game === g ? 'selected' : ''}>${escapeHtml(g)}</option>`).join('')}
+                    </select>
+                  </div>
+
+                  <!-- Player Count Selector (1P - 4P) -->
+                  <div>
+                    <div class="flex justify-between items-center mb-1">
+                      <label class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Players (Controllers)</label>
+                      <span class="text-[11px] font-mono text-cyan-400">₹${draft.players * 40}/30m • ₹${draft.players * 70}/hr</span>
+                    </div>
+                    <div class="grid grid-cols-4 gap-1.5">
+                      ${[1, 2, 3, 4].map(p => `
+                        <button
+                          type="button"
+                          onclick="updateIdleDraft(${st.id}, 'players', ${p}); renderStations();"
+                          class="py-2 rounded-xl font-display text-xs font-bold border transition ${
+                            draft.players === p
+                              ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md shadow-cyan-500/20'
+                              : 'bg-slate-900/90 text-slate-300 border-slate-800 hover:border-slate-700'
+                          }"
+                        >
+                          ${p}P
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+
+                  <!-- Duration Presets & Open Timer -->
+                  <div>
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Session Timer Mode</label>
+                    <div class="grid grid-cols-3 gap-1.5">
+                      ${[
+                        { label: '30 Min', mins: 30, mode: 'countdown' },
+                        { label: '1 Hour', mins: 60, mode: 'countdown' },
+                        { label: '1.5 Hrs', mins: 90, mode: 'countdown' },
+                        { label: '2 Hours', mins: 120, mode: 'countdown' },
+                        { label: '3 Hours', mins: 180, mode: 'countdown' },
+                        { label: 'Open ⏱️', mins: 60, mode: 'stopwatch' }
+                      ].map(preset => {
+                        const isSelected = (draft.mode === preset.mode) && (preset.mode === 'stopwatch' || draft.durationMins === preset.mins);
+                        return `
+                          <button
+                            type="button"
+                            onclick="setIdleDurationPreset(${st.id}, '${preset.mode}', ${preset.mins})"
+                            class="py-2 px-2 rounded-xl text-xs font-semibold border transition ${
+                              isSelected
+                                ? 'bg-blue-600/30 text-cyan-300 border-cyan-400'
+                                : 'bg-slate-900/90 text-slate-400 border-slate-800 hover:text-white'
+                            }"
+                          >
+                            ${preset.label}
+                          </button>
+                        `;
+                      }).join('')}
+                    </div>
+                  </div>
+
+                  <!-- Pre-booking ₹20/player Advance Toggle -->
+                  <label class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-900/70 border border-slate-800/90 cursor-pointer hover:border-slate-700 transition">
+                    <span class="text-xs text-slate-300 flex items-center gap-2">
+                      <i class="fa-solid fa-shield-halved text-cyan-400"></i>
+                      Online Advance (₹${draft.players * 20})
+                    </span>
+                    <input
+                      type="checkbox"
+                      ${draft.advancePaid ? 'checked' : ''}
+                      onchange="updateIdleDraft(${st.id}, 'advancePaid', this.checked); renderStations();"
+                      class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-0"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <!-- Start Session CTA -->
+              <div class="mt-4 pt-3 border-t border-slate-800/80">
+                <button
+                  onclick="startStationSession(${st.id})"
+                  class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 hover:from-cyan-300 hover:to-indigo-500 text-slate-950 font-display font-extrabold text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 transition transform active:scale-[0.99]"
+                >
+                  <i class="fa-solid fa-play"></i>
+                  <span>Start ${st.name} (${previewPrice})</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
+        // ACTIVE OR PAUSED STATION CARD
+        const elapsedMs = getStationElapsedMs(st);
+        const elapsedMins = elapsedMs / 60000;
+        const targetMs = (st.targetMinutes || 60) * 60000;
+        const remainingMs = targetMs - elapsedMs;
+
+        // Determine card visual alert state
+        let cardStateClass = 'station-active';
+        let badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>In Session</span>`;
+
+        if (st.status === 'PAUSED') {
+          cardStateClass = 'station-paused';
+          badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-1.5"><i class="fa-solid fa-pause"></i> Paused</span>`;
+        } else if (st.mode === 'countdown' && remainingMs <= 0) {
+          cardStateClass = 'station-overdue';
+          badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-red-500 text-slate-950 font-extrabold flex items-center gap-1.5 animate-bounce"><i class="fa-solid fa-bell"></i> TIME UP</span>`;
+        } else if (st.mode === 'countdown' && remainingMs <= 5 * 60000) {
+          cardStateClass = 'station-warning';
+          badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/50 flex items-center gap-1.5"><i class="fa-solid fa-clock"></i> &lt; 5m Left</span>`;
+        }
+
+        // Bill calculation
+        const billableMins = st.mode === 'countdown'
+          ? Math.max(st.targetMinutes, Math.ceil(elapsedMins))
+          : Math.max(30, Math.ceil(elapsedMins));
+        const gamingFee = calculateGamingCharge(billableMins, st.players);
+        const snacksFee = calculateSnacksTotal(st.snacks);
+        const advanceDed = st.advancePaid ? (st.players * 20) : 0;
+        const liveNetPayable = Math.max(0, gamingFee + snacksFee - advanceDed);
+
+        // Progress percentage
+        const progressPct = st.mode === 'countdown'
+          ? Math.min(100, Math.max(0, (elapsedMs / targetMs) * 100))
+          : 100;
+
+        const expectedEndTime = st.startTime ? (st.startTime + targetMs + (st.totalPausedMs || 0)) : null;
+
+        // Free stations for quick transfer
+        const freeStations = stations.filter(s => s.status === 'IDLE' && s.id !== st.id);
+
+        return `
+          <div class="glass-panel ${cardStateClass} rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all duration-300">
+            <div>
+              <!-- Header -->
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/40 flex items-center justify-center text-cyan-300 font-display font-bold text-sm">
+                    0${st.id}
+                  </div>
+                  <div>
+                    <h3 class="font-display text-base font-extrabold text-white">${st.name}</h3>
+                    <p class="text-xs font-semibold text-cyan-400 truncate max-w-[150px]">${escapeHtml(st.customerName || 'Walk-in Player')}</p>
+                  </div>
+                </div>
+                ${badgeHtml}
+              </div>
+
+              <!-- Game & Player Count Bar -->
+              <div class="flex items-center justify-between text-xs bg-slate-900/90 border border-slate-800 px-3 py-2 rounded-xl mb-3">
+                <span class="text-slate-300 truncate max-w-[170px]" title="${escapeHtml(st.game)}">
+                  <i class="fa-solid fa-compact-disc text-cyan-400 mr-1.5"></i>${escapeHtml(st.game)}
+                </span>
+                <div class="flex items-center gap-1">
+                  ${[1, 2, 3, 4].map(p => `
+                    <button
+                      onclick="changeActivePlayers(${st.id}, ${p})"
+                      title="Switch to ${p} Players"
+                      class="px-1.5 py-0.5 rounded text-[11px] font-bold transition ${
+                        st.players === p
+                          ? 'bg-cyan-400 text-slate-950'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }"
+                    >${p}P</button>
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- Digital Timer Box -->
+              <div class="bg-slate-950/95 border border-slate-800/90 rounded-2xl p-4 text-center relative overflow-hidden">
+                <div class="text-[11px] uppercase tracking-widest text-slate-400 font-semibold">
+                  ${st.mode === 'stopwatch'
+                    ? 'OPEN STOPWATCH ELAPSED'
+                    : (remainingMs >= 0 ? `COUNTDOWN (${st.targetMinutes}M SLAB)` : 'OVERTIME ELAPSED')}
+                </div>
+
+                <!-- Live Digital Readout (Updated every second via tick) -->
+                <div
+                  id="timerDisplay_${st.id}"
+                  class="font-mono text-3xl sm:text-4xl font-extrabold tracking-tight my-1.5 ${
+                    st.mode === 'countdown' && remainingMs <= 0
+                      ? 'text-red-400'
+                      : (st.mode === 'countdown' && remainingMs <= 5 * 60000 ? 'text-amber-400' : 'text-white')
+                  }"
+                >
+                  ${st.mode === 'stopwatch'
+                    ? formatHMS(elapsedMs)
+                    : (remainingMs >= 0 ? formatHMS(remainingMs) : '+' + formatHMS(Math.abs(remainingMs)))}
+                </div>
+
+                <!-- Start & End Timestamps -->
+                <div class="flex items-center justify-between text-[11px] text-slate-400 font-mono mt-1 pt-2 border-t border-slate-900">
+                  <span>In: ${formatClockTime(st.startTime)}</span>
+                  <span>${st.mode === 'countdown' ? 'End: ' + formatClockTime(expectedEndTime) : 'Live Count-Up'}</span>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden mt-2.5">
+                  <div
+                    id="timerProgress_${st.id}"
+                    style="width: ${progressPct}%"
+                    class="h-full transition-all duration-500 ${
+                      st.mode === 'countdown' && remainingMs <= 0
+                        ? 'bg-red-500'
+                        : (st.mode === 'countdown' && remainingMs <= 5 * 60000 ? 'bg-amber-400' : 'bg-gradient-to-r from-cyan-400 to-blue-500')
+                    }"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- Live Running Bill Breakdown -->
+              <div class="mt-3 bg-slate-900/75 border border-slate-800/90 rounded-xl p-3 flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] text-slate-400">Running Net Bill</div>
+                  <div class="text-xs text-slate-400 mt-0.5">
+                    Game: <span class="text-slate-200 font-mono">₹${gamingFee}</span>
+                    ${snacksFee > 0 ? ` • Snacks: <span class="text-amber-400 font-mono">+₹${snacksFee}</span>` : ''}
+                    ${advanceDed > 0 ? ` • Adv: <span class="text-emerald-400 font-mono">-₹${advanceDed}</span>` : ''}
+                  </div>
+                </div>
+                <div id="liveBill_${st.id}" class="font-display text-xl font-black text-emerald-400">
+                  ₹${liveNetPayable}
+                </div>
+              </div>
+
+              <!-- Mid-Session Quick Extend Controls -->
+              <div class="mt-3">
+                <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1.5">
+                  <span class="uppercase tracking-wider font-semibold">Quick Extend Time</span>
+                  ${st.mode === 'countdown' && st.targetMinutes > 30 ? `<button onclick="extendStationTime(${st.id}, -30)" class="text-slate-400 hover:text-red-400">-30m</button>` : ''}
+                </div>
+                <div class="grid grid-cols-3 gap-1.5">
+                  <button onclick="extendStationTime(${st.id}, 15)" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-cyan-300 transition">
+                    +15m
+                  </button>
+                  <button onclick="extendStationTime(${st.id}, 30)" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-cyan-300 transition">
+                    +30m (+₹${st.players * 40})
+                  </button>
+                  <button onclick="extendStationTime(${st.id}, 60)" class="py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-cyan-300 transition">
+                    +1 Hr (+₹${st.players * 70})
+                  </button>
+                </div>
+              </div>
+
+              <!-- Secondary Controls: Snacks, Pause, Transfer -->
+              <div class="grid grid-cols-3 gap-1.5 mt-2">
+                <button onclick="openSnacksModal(${st.id})" class="py-2 px-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+                  <i class="fa-solid fa-bottle-water"></i>
+                  <span>Snacks ${st.snacks.length > 0 ? `(${st.snacks.length})` : ''}</span>
+                </button>
+
+                <button onclick="togglePauseStation(${st.id})" class="py-2 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+                  <i class="fa-solid ${st.status === 'PAUSED' ? 'fa-play text-emerald-400' : 'fa-pause text-purple-400'}"></i>
+                  <span>${st.status === 'PAUSED' ? 'Resume' : 'Pause'}</span>
+                </button>
+
+                ${freeStations.length > 0 ? `
+                  <select
+                    onchange="if(this.value) transferStation(${st.id}, Number(this.value))"
+                    class="py-2 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold focus:outline-none"
+                  >
+                    <option value="">Move To...</option>
+                    ${freeStations.map(fs => `<option value="${fs.id}">→ ${fs.name}</option>`).join('')}
+                  </select>
+                ` : `
+                  <button disabled class="py-2 px-2 rounded-xl bg-slate-900/40 border border-slate-800/50 text-slate-600 text-xs font-semibold cursor-not-allowed">
+                    No Free PS5
+                  </button>
+                `}
+              </div>
+            </div>
+
+            <!-- Checkout & End CTA -->
+            <div class="mt-4 pt-3 border-t border-slate-800/80 flex gap-2">
+              <button
+                onclick="cancelStationSession(${st.id})"
+                title="Cancel accidental start"
+                class="px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-slate-800 text-xs transition"
+              >
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+              <button
+                onclick="openCheckoutModal(${st.id})"
+                class="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 font-display font-extrabold text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
+              >
+                <i class="fa-solid fa-cash-register"></i>
+                <span>End & Bill (₹${liveNetPayable})</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updateTopKPIs();
+    }
+
+    /*************************************************************************
+     * 7. STATION ACTIONS (START, EXTEND, PAUSE, TRANSFER, CANCEL)
+     *************************************************************************/
+    function updateIdleDraft(stationId, field, value) {
+      if (!idleFormDrafts[stationId]) return;
+      idleFormDrafts[stationId][field] = value;
+    }
+
+    function setIdleDurationPreset(stationId, mode, mins) {
+      if (!idleFormDrafts[stationId]) return;
+      idleFormDrafts[stationId].mode = mode;
+      idleFormDrafts[stationId].durationMins = mins;
+      renderStations();
+    }
+
+    function startStationSession(stationId) {
+      const st = stations.find(s => s.id === stationId);
+      if (!st) return;
+      const draft = idleFormDrafts[stationId];
+
+      st.status = 'ACTIVE';
+      st.customerName = (draft.customerName || '').trim() || `Walk-In #${stationId}`;
+      st.game = draft.game || PS5_GAMES[0];
+      st.players = Number(draft.players) || 2;
+      st.mode = draft.mode || 'countdown';
+      st.targetMinutes = Number(draft.durationMins) || 60;
+      st.startTime = Date.now();
+      st.pausedAt = null;
+      st.totalPausedMs = 0;
+      st.advancePaid = Boolean(draft.advancePaid);
+      st.snacks = [];
+      st.warned5Min = false;
+      st.warnedTimeUp = false;
+
+      // Reset draft name for next customer
+      idleFormDrafts[stationId].customerName = '';
+      idleFormDrafts[stationId].advancePaid = false;
+
+      saveStations();
+      playSound('start');
+      renderStations();
+      showToast(`${st.name} started for ${st.customerName} (${st.players}P • ${st.mode === 'stopwatch' ? 'Open Timer' : st.targetMinutes + 'm'})`, 'success');
+    }
+
+    function extendStationTime(stationId, addMinutes) {
+      const st = stations.find(s => s.id === stationId);
+      if (!st || st.status === 'IDLE') return;
+
+      if (st.mode === 'stopwatch') {
+        st.mode = 'countdown';
+        const currentMins = Math.ceil(getStationElapsedMs(st) / 60000);
+        st.targetMinutes = Math.max(30, currentMins + addMinutes);
+      } else {
+        st.targetMinutes = Math.max(15, (st.targetMinutes || 60) + addMinutes);
+      }
+
+      // Reset warning flags if now above threshold
+      const remainingMs = (st.targetMinutes * 60000) - getStationElapsedMs(st);
+      if (remainingMs > 5 * 60000) st.warned5Min = false;
+      if (remainingMs > 0) st.warnedTimeUp = false;
+
+      saveStations();
+      renderStations();
+      showToast(`${st.name}: ${addMinutes > 0 ? '+' + addMinutes : addMinutes} mins updated (Total: ${st.targetMinutes}m)`, 'info');
+    }
+
+    function changeActivePlayers(stationId, newPlayers) {
+      const st = stations.find(s => s.id === stationId);
+      if (!st || st.status === 'IDLE') return;
+      st.players = newPlayers;
+      saveStations();
+      renderStations();
+      showToast(`${st.name} updated to ${newPlayers} Player(s)`, 'info');
+    }
+
+    function togglePauseStation(stationId) {
+      const st = stations.find(s => s.id === stationId);
+      if (!st || st.status === 'IDLE') return;
+
+      if (st.status === 'ACTIVE') {
+        st.status = 'PAUSED';
+        st.pausedAt = Date.now();
+        showToast(`${st.name} timer paused`, 'warning');
+      } else if (st.status === 'PAUSED') {
+        if (st.pausedAt) {
+          st.totalPausedMs = (st.totalPausedMs || 0) + (Date.now() - st.pausedAt);
+        }
+        st.pausedAt = null;
+        st.status = 'ACTIVE';
+        showToast(`${st.name} timer resumed`, 'success');
+      }
+      saveStations();
+      renderStations();
+    }
+
+    function transferStation(fromId, toId) {
+      const fromSt = stations.find(s => s.id === fromId);
+      const toSt = stations.find(s => s.id === toId);
+      if (!fromSt || !toSt || toSt.status !== 'IDLE') return;
+
+      // Copy active session properties to target station
+      Object.assign(toSt, {
+        status: fromSt.status,
+        customerName: fromSt.customerName,
+        game: fromSt.game,
+        players: fromSt.players,
+        mode: fromSt.mode,
+        targetMinutes: fromSt.targetMinutes,
+        startTime: fromSt.startTime,
+        pausedAt: fromSt.pausedAt,
+        totalPausedMs: fromSt.totalPausedMs,
+        advancePaid: fromSt.advancePaid,
+        snacks: [...fromSt.snacks],
+        warned5Min: fromSt.warned5Min,
+        warnedTimeUp: fromSt.warnedTimeUp
+      });
+
+      // Reset source station
+      resetStationObject(fromSt);
+      saveStations();
+      renderStations();
+      showToast(`Transferred session from ${fromSt.name} to ${toSt.name}`, 'success');
+    }
+
+    function cancelStationSession(stationId) {
+      const st = stations.find(s => s.id === stationId);
+      if (!st) return;
+      resetStationObject(st);
+      saveStations();
+      renderStations();
+      showToast(`${st.name} session cancelled & reset to Available`, 'warning');
+    }
+
+    function resetStationObject(st) {
+      st.status = 'IDLE';
+      st.customerName = '';
+      st.players = 2;
+      st.mode = 'countdown';
+      st.targetMinutes = 60;
+      st.startTime = null;
+      st.pausedAt = null;
+      st.totalPausedMs = 0;
+      st.advancePaid = false;
+      st.snacks = [];
+      st.warned5Min = false;
+      st.warnedTimeUp = false;
+    }
+
+    /*************************************************************************
+     * 8. SNACKS & ADD-ONS MODAL LOGIC
+     *************************************************************************/
+    function openSnacksModal(stationId) {
+      activeSnackStationId = stationId;
+      const st = stations.find(s => s.id === stationId);
+      if (!st) return;
+      document.getElementById('snackModalStationTitle').textContent = st.name;
+      renderStationSnacksList();
+      const modal = document.getElementById('snacksModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeSnacksModal() {
+      const modal = document.getElementById('snacksModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      activeSnackStationId = null;
+    }
+
+    function addSnackToStation(itemName, price) {
+      const st = stations.find(s => s.id === activeSnackStationId);
+      if (!st) return;
+      st.snacks.push({
+        id: Date.now() + Math.random(),
+        name: itemName,
+        price: Number(price)
+      });
+      saveStations();
+      renderStationSnacksList();
+      renderStations();
+      showToast(`Added ${itemName} (+₹${price}) to ${st.name}`, 'success');
+    }
+
+    function addCustomSnack() {
+      const nameInput = document.getElementById('customSnackName');
+      const priceInput = document.getElementById('customSnackPrice');
+      const name = nameInput.value.trim() || 'Extra Add-on';
+      const price = Number(priceInput.value);
+      if (!price || price <= 0) {
+        showToast('Please enter a valid ₹ amount', 'warning');
+        return;
+      }
+      addSnackToStation(name, price);
+      nameInput.value = '';
+      priceInput.value = '';
+    }
+
+    function removeSnackFromStation(snackId) {
+      const st = stations.find(s => s.id === activeSnackStationId);
+      if (!st) return;
+      st.snacks = st.snacks.filter(item => item.id !== snackId);
+      saveStations();
+      renderStationSnacksList();
+      renderStations();
+    }
+
+    function renderStationSnacksList() {
+      const st = stations.find(s => s.id === activeSnackStationId);
+      const container = document.getElementById('currentStationSnacksList');
+      if (!st || !container) return;
+
+      if (st.snacks.length === 0) {
+        container.innerHTML = `<div class="text-slate-500 italic py-2">No snacks or drinks added to this session yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = st.snacks.map(item => `
+        <div class="flex items-center justify-between bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
+          <span class="text-slate-200">${escapeHtml(item.name)}</span>
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-bold text-amber-400">₹${item.price}</span>
+            <button onclick="removeSnackFromStation(${item.id})" class="text-slate-500 hover:text-red-400">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /*************************************************************************
+     * 9. CHECKOUT & BILLING RECEIPT MODAL
+     *************************************************************************/
+    function openCheckoutModal(stationId) {
+      const st = stations.find(s => s.id === stationId);
+      if (!st || st.status === 'IDLE') return;
+
+      activeCheckoutStationId = stationId;
+      document.getElementById('checkoutStationBadge').textContent = st.name;
+      document.getElementById('coCustomer').textContent = st.customerName || 'Walk-in Player';
+      document.getElementById('coGame').textContent = st.game;
+      document.getElementById('coPlayers').textContent = `${st.players} Player${st.players > 1 ? 's' : ''}`;
+      document.getElementById('coTimeSpan').textContent = `${formatClockTime(st.startTime)} → ${formatClockTime(Date.now())}`;
+      document.getElementById('coAdvanceCheckbox').checked = Boolean(st.advancePaid);
+
+      selectPaymentMode('UPI');
+      recalculateCheckoutModal();
+
+      const modal = document.getElementById('checkoutModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function recalculateCheckoutModal() {
+      const st = stations.find(s => s.id === activeCheckoutStationId);
+      if (!st) return;
+
+      const elapsedMins = Math.max(1, Math.round(getStationElapsedMs(st) / 60000));
+      const billableMins = st.mode === 'countdown'
+        ? Math.max(st.targetMinutes, elapsedMins)
+        : Math.max(30, elapsedMins);
+
+      const gamingFee = calculateGamingCharge(billableMins, st.players);
+      const snacksFee = calculateSnacksTotal(st.snacks);
+      const advanceChecked = document.getElementById('coAdvanceCheckbox').checked;
+      st.advancePaid = advanceChecked;
+      const advanceDed = advanceChecked ? (st.players * 20) : 0;
+      const netPayable = Math.max(0, gamingFee + snacksFee - advanceDed);
+
+      document.getElementById('coDuration').textContent = `${billableMins} Mins (Played: ${elapsedMins}m)`;
+      document.getElementById('coPricingFormula').textContent = `${st.players}P × RESPAWNX Slab (${billableMins}m)`;
+      document.getElementById('coGamingFee').textContent = `₹${gamingFee}`;
+      document.getElementById('coSnacksList').textContent = st.snacks.length > 0
+        ? st.snacks.map(s => s.name).join(', ')
+        : 'None added';
+      document.getElementById('coSnacksFee').textContent = `+₹${snacksFee}`;
+      document.getElementById('coAdvanceFee').textContent = `-₹${advanceDed}`;
+      document.getElementById('coFinalAmountInput').value = netPayable;
+    }
+
+    function selectPaymentMode(mode) {
+      selectedPaymentMode = mode;
+      const modes = ['UPI', 'CASH', 'SPLIT'];
+      modes.forEach(m => {
+        const btn = document.getElementById('payBtn' + m);
+        if (!btn) return;
+        if (m === mode) {
+          btn.className = 'py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-md shadow-cyan-500/10';
+        } else {
+          btn.className = 'py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-slate-900 border-slate-800 text-slate-400 hover:text-white';
+        }
+      });
+
+      const qrBox = document.getElementById('upiQrBox');
+      if (mode === 'CASH') {
+        qrBox.classList.add('hidden');
+      } else {
+        qrBox.classList.remove('hidden');
+      }
+    }
+
+    function closeCheckoutModal() {
+      const modal = document.getElementById('checkoutModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      activeCheckoutStationId = null;
+    }
+
+    function confirmAndCompleteCheckout() {
+      const st = stations.find(s => s.id === activeCheckoutStationId);
+      if (!st) return;
+
+      const elapsedMins = Math.max(1, Math.round(getStationElapsedMs(st) / 60000));
+      const billableMins = st.mode === 'countdown'
+        ? Math.max(st.targetMinutes, elapsedMins)
+        : Math.max(30, elapsedMins);
+
+      const gamingFee = calculateGamingCharge(billableMins, st.players);
+      const snacksFee = calculateSnacksTotal(st.snacks);
+      const advanceDed = st.advancePaid ? (st.players * 20) : 0;
+      const finalPaid = Math.max(0, Number(document.getElementById('coFinalAmountInput').value) || 0);
+
+      // Create ledger entry
+      const entry = {
+        id: Date.now(),
+        timestamp: Date.now(),
+        timeStr: formatClockTime(Date.now()),
+        stationName: st.name,
+        customerName: st.customerName || 'Walk-in Player',
+        game: st.game,
+        players: st.players,
+        durationMins: billableMins,
+        gamingFee,
+        snacksFee,
+        advanceDed,
+        finalPaid,
+        paymentMode: selectedPaymentMode
+      };
+
+      ledger.unshift(entry);
+      saveLedger();
+
+      // Reset station
+      const stName = st.name;
+      resetStationObject(st);
+      saveStations();
+
+      closeCheckoutModal();
+      playSound('cash');
+      renderStations();
+      renderLedger();
+      showToast(`Payment of ₹${finalPaid} (${selectedPaymentMode}) logged! ${stName} is now Available.`, 'success');
+    }
+
+    function copyUpiId() {
+      const temp = document.createElement('input');
+      temp.value = 'kaushalkotian19@okicici';
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      showToast('UPI ID kaushalkotian19@okicici copied!', 'info');
+    }
+
+    /*************************************************************************
+     * 10. TODAY'S REVENUE LEDGER & CSV EXPORT
+     *************************************************************************/
+    function renderLedger() {
+      const tbody = document.getElementById('ledgerTableBody');
+      const searchQ = (document.getElementById('ledgerSearchInput')?.value || '').toLowerCase().trim();
+      document.getElementById('badgeLedgerCount').textContent = ledger.length;
+
+      const filtered = ledger.filter(item => {
+        if (!searchQ) return true;
+        return (
+          item.customerName.toLowerCase().includes(searchQ) ||
+          item.game.toLowerCase().includes(searchQ) ||
+          item.stationName.toLowerCase().includes(searchQ) ||
+          item.paymentMode.toLowerCase().includes(searchQ)
+        );
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="11" class="py-8 text-center text-slate-500 text-xs sm:text-sm">
+              No completed sessions logged yet today. Start a PS5 station above and click "End & Bill" to record revenue.
+            </td>
+          </tr>
+        `;
+        updateTopKPIs();
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(item => `
+        <tr class="hover:bg-slate-900/60 transition">
+          <td class="py-3 px-3 font-mono text-xs text-slate-400">${item.timeStr}</td>
+          <td class="py-3 px-3">
+            <span class="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 font-display text-xs font-bold">${item.stationName}</span>
+          </td>
+          <td class="py-3 px-3">
+            <div class="font-semibold text-white">${escapeHtml(item.customerName)}</div>
+            <div class="text-[11px] text-slate-400">${escapeHtml(item.game)}</div>
+          </td>
+          <td class="py-3 px-3 font-mono text-xs text-slate-300">${item.players}P</td>
+          <td class="py-3 px-3 font-mono text-xs text-slate-300">${item.durationMins}m</td>
+          <td class="py-3 px-3 font-mono text-xs text-slate-300">₹${item.gamingFee}</td>
+          <td class="py-3 px-3 font-mono text-xs text-amber-400">${item.snacksFee > 0 ? '+₹' + item.snacksFee : '—'}</td>
+          <td class="py-3 px-3 font-mono text-xs text-emerald-400">${item.advanceDed > 0 ? '-₹' + item.advanceDed : '—'}</td>
+          <td class="py-3 px-3 font-mono font-bold text-emerald-400">₹${item.finalPaid}</td>
+          <td class="py-3 px-3">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+              item.paymentMode === 'UPI'
+                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                : (item.paymentMode === 'CASH' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-purple-500/20 text-purple-300')
+            }">${item.paymentMode}</span>
+          </td>
+          <td class="py-3 px-3 text-right">
+            <button onclick="deleteLedgerItem(${item.id})" title="Delete Record" class="text-slate-500 hover:text-red-400 px-2 py-1">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      updateTopKPIs();
+    }
+
+    function deleteLedgerItem(id) {
+      ledger = ledger.filter(item => item.id !== id);
+      saveLedger();
+      renderLedger();
+      showToast('Session entry removed from ledger', 'info');
+    }
+
+    function exportLedgerCSV() {
+      if (ledger.length === 0) {
+        showToast('No ledger entries to export yet!', 'warning');
+        return;
+      }
+      const headers = ['Time', 'Station', 'Customer', 'Game', 'Players', 'Duration(Mins)', 'Gaming(INR)', 'Snacks(INR)', 'AdvanceDeducted(INR)', 'NetPaid(INR)', 'PaymentMode'];
+      const rows = ledger.map(i => [
+        `"${i.timeStr}"`,
+        `"${i.stationName}"`,
+        `"${i.customerName.replace(/"/g, '""')}"`,
+        `"${i.game.replace(/"/g, '""')}"`,
+        i.players,
+        i.durationMins,
+        i.gamingFee,
+        i.snacksFee,
+        i.advanceDed,
+        i.finalPaid,
+        `"${i.paymentMode}"`
+      ]);
+
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      const dateStr = new Date().toISOString().slice(0, 10);
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `RESPAWNX_Report_${dateStr}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('CSV Revenue Report downloaded!', 'success');
+    }
+
+    function openResetLedgerModal() {
+      const m = document.getElementById('resetLedgerModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+
+    function closeResetLedgerModal() {
+      const m = document.getElementById('resetLedgerModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    function confirmClearLedger() {
+      ledger = [];
+      saveLedger();
+      renderLedger();
+      closeResetLedgerModal();
+      showToast('Daily revenue ledger cleared', 'info');
+    }
+
+    /*************************************************************************
+     * 11. WALK-IN WAITING QUEUE
+     *************************************************************************/
+    function addQueueItem() {
+      const nameEl = document.getElementById('queueName');
+      const phoneEl = document.getElementById('queuePhone');
+      const playersEl = document.getElementById('queuePlayers');
+      const durationEl = document.getElementById('queueDuration');
+      const notesEl = document.getElementById('queueNotes');
+      const advEl = document.getElementById('queueAdvance');
+
+      const name = nameEl.value.trim();
+      if (!name) {
+        showToast('Please enter customer name for the waiting list', 'warning');
+        return;
+      }
+
+      waitingQueue.push({
+        id: Date.now(),
+        name,
+        phone: phoneEl.value.trim(),
+        players: Number(playersEl.value) || 2,
+        durationMins: Number(durationEl.value) || 60,
+        notes: notesEl.value.trim() || PS5_GAMES[0],
+        advancePaid: advEl.checked,
+        addedAt: formatClockTime(Date.now())
+      });
+
+      nameEl.value = '';
+      phoneEl.value = '';
+      notesEl.value = '';
+      advEl.checked = false;
+
+      saveQueue();
+      renderQueue();
+      updateTopKPIs();
+      showToast(`${name} added to waiting queue`, 'success');
+    }
+
+    function assignQueueToStation(queueId, stationId) {
+      const qItem = waitingQueue.find(q => q.id === queueId);
+      const st = stations.find(s => s.id === stationId);
+      if (!qItem || !st || st.status !== 'IDLE') return;
+
+      idleFormDrafts[stationId] = {
+        customerName: qItem.name,
+        game: PS5_GAMES.find(g => g.toLowerCase().includes(qItem.notes.toLowerCase())) || PS5_GAMES[0],
+        players: qItem.players,
+        mode: 'countdown',
+        durationMins: qItem.durationMins,
+        advancePaid: qItem.advancePaid
+      };
+
+      startStationSession(stationId);
+      waitingQueue = waitingQueue.filter(q => q.id !== queueId);
+      saveQueue();
+      renderQueue();
+      updateTopKPIs();
+    }
+
+    function removeQueueItem(queueId) {
+      waitingQueue = waitingQueue.filter(q => q.id !== queueId);
+      saveQueue();
+      renderQueue();
+      updateTopKPIs();
+    }
+
+    function renderQueue() {
+      const container = document.getElementById('queueListContainer');
+      document.getElementById('badgeQueueCount').textContent = waitingQueue.length;
+      if (!container) return;
+
+      if (waitingQueue.length === 0) {
+        container.innerHTML = `
+          <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-8 text-center text-slate-500 text-xs sm:text-sm">
+            <i class="fa-solid fa-couch text-2xl mb-2 text-slate-600 block"></i>
+            Waiting queue is empty. Add walk-ins or upcoming slot bookings on the left when all 4 PS5 stations are full.
+          </div>
+        `;
+        return;
+      }
+
+      const freeStations = stations.filter(s => s.status === 'IDLE');
+
+      container.innerHTML = waitingQueue.map((q, idx) => `
+        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 font-mono font-bold text-xs flex items-center justify-center">
+              #${idx + 1}
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-sm">${escapeHtml(q.name)}</span>
+                <span class="px-2 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono text-[11px]">${q.players}P • ${q.durationMins}m</span>
+                ${q.advancePaid ? `<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">₹${q.players * 20} Adv Paid</span>` : ''}
+              </div>
+              <div class="text-xs text-slate-400 mt-0.5">
+                Added ${q.addedAt} ${q.phone ? `• 📞 ${escapeHtml(q.phone)}` : ''} • 🎮 ${escapeHtml(q.notes)}
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            ${freeStations.length > 0 ? `
+              <select
+                onchange="if(this.value) assignQueueToStation(${q.id}, Number(this.value))"
+                class="px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs cursor-pointer focus:outline-none"
+              >
+                <option value="">Assign Free PS5...</option>
+                ${freeStations.map(fs => `<option value="${fs.id}">Start ${fs.name}</option>`).join('')}
+              </select>
+            ` : `
+              <span class="text-xs text-amber-400 font-semibold px-2">All 4 Busy</span>
+            `}
+            <button onclick="removeQueueItem(${q.id})" class="p-2 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 text-xs">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function switchBottomTab(tab) {
+      const btnLedger = document.getElementById('tabBtnLedger');
+      const btnQueue = document.getElementById('tabBtnQueue');
+      const contentLedger = document.getElementById('tabContentLedger');
+      const contentQueue = document.getElementById('tabContentQueue');
+      const ledgerActions = document.getElementById('ledgerActions');
+
+      if (tab === 'ledger') {
+        btnLedger.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20';
+        btnQueue.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition bg-slate-800/80 text-slate-300 hover:text-white';
+        contentLedger.classList.remove('hidden');
+        contentQueue.classList.add('hidden');
+        ledgerActions.classList.remove('hidden');
+      } else {
+        btnQueue.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20';
+        btnLedger.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition bg-slate-800/80 text-slate-300 hover:text-white';
+        contentQueue.classList.remove('hidden');
+        contentLedger.classList.add('hidden');
+        ledgerActions.classList.add('hidden');
+        renderQueue();
+      }
+    }
+
+    /*************************************************************************
+     * 12. REAL-TIME 1-SECOND HEARTBEAT TICK & KPI UPDATES
+     *************************************************************************/
+    function updateTopKPIs() {
+      // 1. Active stations & live players
+      const activeList = stations.filter(s => s.status !== 'IDLE');
+      const totalLivePlayers = activeList.reduce((sum, s) => sum + (Number(s.players) || 0), 0);
+      document.getElementById('kpiActiveCount').textContent = `${activeList.length} / 4`;
+      document.getElementById('kpiActivePlayers').textContent = `${totalLivePlayers} Player${totalLivePlayers === 1 ? '' : 's'} Live`;
+
+      // 2. Live running unbilled revenue
+      let runningTab = 0;
+      activeList.forEach(st => {
+        const elapsedMins = getStationElapsedMs(st) / 60000;
+        const billableMins = st.mode === 'countdown'
+          ? Math.max(st.targetMinutes, Math.ceil(elapsedMins))
+          : Math.max(30, Math.ceil(elapsedMins));
+        const gFee = calculateGamingCharge(billableMins, st.players);
+        const sFee = calculateSnacksTotal(st.snacks);
+        const adv = st.advancePaid ? st.players * 20 : 0;
+        runningTab += Math.max(0, gFee + sFee - adv);
+      });
+      document.getElementById('kpiLiveRunningRevenue').textContent = `₹${runningTab}`;
+
+      // 3. Today's collected revenue
+      const totalCollected = ledger.reduce((sum, item) => sum + (Number(item.finalPaid) || 0), 0);
+      const upiTotal = ledger.filter(i => i.paymentMode === 'UPI').reduce((sum, i) => sum + i.finalPaid, 0);
+      const cashTotal = ledger.filter(i => i.paymentMode === 'CASH').reduce((sum, i) => sum + i.finalPaid, 0);
+      document.getElementById('kpiTodayRevenue').textContent = `₹${totalCollected}`;
+      document.getElementById('kpiPaymentSplit').textContent = `UPI: ₹${upiTotal} • Cash: ₹${cashTotal}`;
+
+      // 4. Completed count & queue
+      document.getElementById('kpiCompletedSessions').textContent = ledger.length;
+      document.getElementById('kpiQueueCount').textContent = `${waitingQueue.length} waiting in queue`;
+    }
+
+    function tickTimers() {
+      // Update top live clock
+      const now = new Date();
+      document.getElementById('liveClockTime').textContent = now.toLocaleTimeString('en-IN', { hour12: true });
+      document.getElementById('liveClockDate').textContent = now.toLocaleDateString('en-IN', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+
+      let needsFullRender = false;
+
+      stations.forEach(st => {
+        if (st.status !== 'ACTIVE') return;
+
+        const elapsedMs = getStationElapsedMs(st);
+        const targetMs = (st.targetMinutes || 60) * 60000;
+        const remainingMs = targetMs - elapsedMs;
+
+        // Check 5-minute warning trigger
+        if (st.mode === 'countdown' && remainingMs <= 5 * 60000 && remainingMs > 0 && !st.warned5Min) {
+          st.warned5Min = true;
+          saveStations();
+          playSound('warning');
+          showToast(`⚠️ ${st.name} (${st.customerName}) has 5 minutes remaining!`, 'warning');
+          needsFullRender = true;
+        }
+
+        // Check Time-Up trigger
+        if (st.mode === 'countdown' && remainingMs <= 0 && !st.warnedTimeUp) {
+          st.warnedTimeUp = true;
+          saveStations();
+          playSound('timeup');
+          showToast(`🚨 TIME UP on ${st.name} (${st.customerName})! Extend or Checkout.`, 'error');
+          needsFullRender = true;
+        }
+
+        // Fast DOM update for timer text & progress bar
+        const timerEl = document.getElementById(`timerDisplay_${st.id}`);
+        const progEl = document.getElementById(`timerProgress_${st.id}`);
+        if (timerEl) {
+          timerEl.textContent = st.mode === 'stopwatch'
+            ? formatHMS(elapsedMs)
+            : (remainingMs >= 0 ? formatHMS(remainingMs) : '+' + formatHMS(Math.abs(remainingMs)));
+        }
+        if (progEl && st.mode === 'countdown') {
+          const pct = Math.min(100, Math.max(0, (elapsedMs / targetMs) * 100));
+          progEl.style.width = `${pct}%`;
+        }
+      });
+
+      if (needsFullRender) {
+        renderStations();
+      } else {
+        updateTopKPIs();
+      }
+    }
+
+    /*************************************************************************
+     * 13. DEMO STATE LOADER & MODALS
+     *************************************************************************/
+    function loadDemoSessions() {
+      const now = Date.now();
+      stations = [
+        {
+          id: 1,
+          name: 'PS5-01',
+          tvSpec: '43" 4K UHD HDR • DualSense',
+          status: 'ACTIVE',
+          customerName: 'Rahul & Rohan',
+          game: 'EA Sports FC 26 (FIFA)',
+          players: 2,
+          mode: 'countdown',
+          targetMinutes: 60,
+          startTime: now - (38 * 60000), // 22 mins remaining
+          pausedAt: null,
+          totalPausedMs: 0,
+          advancePaid: true,
+          snacks: [{ id: 101, name: 'Cold Drink', price: 40 }],
+          warned5Min: false,
+          warnedTimeUp: false
+        },
+        {
+          id: 2,
+          name: 'PS5-02',
+          tvSpec: '43" 4K UHD HDR • DualSense',
+          status: 'ACTIVE',
+          customerName: 'Aarav Squad',
+          game: 'WWE 2K25',
+          players: 4,
+          mode: 'countdown',
+          targetMinutes: 60,
+          startTime: now - (56 * 60000), // 4 mins remaining (<5m amber warning state!)
+          pausedAt: null,
+          totalPausedMs: 0,
+          advancePaid: false,
+          snacks: [
+            { id: 102, name: 'Water Bottle', price: 20 },
+            { id: 103, name: 'Chips / Crisps', price: 30 }
+          ],
+          warned5Min: true,
+          warnedTimeUp: false
+        },
+        {
+          id: 3,
+          name: 'PS5-03',
+          tvSpec: '43" 4K UHD HDR • DualSense',
+          status: 'IDLE',
+          customerName: '',
+          game: 'GTA V / GTA Online',
+          players: 1,
+          mode: 'countdown',
+          targetMinutes: 60,
+          startTime: null,
+          pausedAt: null,
+          totalPausedMs: 0,
+          advancePaid: false,
+          snacks: [],
+          warned5Min: false,
+          warnedTimeUp: false
+        },
+        {
+          id: 4,
+          name: 'PS5-04',
+          tvSpec: '43" 4K UHD HDR • DualSense',
+          status: 'ACTIVE',
+          customerName: 'Nikhil Poojary',
+          game: 'Mortal Kombat 1',
+          players: 2,
+          mode: 'stopwatch',
+          targetMinutes: 60,
+          startTime: now - (47 * 60000), // Open stopwatch 47 mins elapsed
+          pausedAt: null,
+          totalPausedMs: 0,
+          advancePaid: false,
+          snacks: [],
+          warned5Min: false,
+          warnedTimeUp: false
+        }
+      ];
+
+      if (ledger.length === 0) {
+        ledger = [
+          {
+            id: now - 7200000,
+            timestamp: now - 7200000,
+            timeStr: formatClockTime(now - 7200000),
+            stationName: 'PS5-01',
+            customerName: 'Shreyas & Friend',
+            game: 'EA Sports FC 26 (FIFA)',
+            players: 2,
+            durationMins: 60,
+            gamingFee: 140,
+            snacksFee: 40,
+            advanceDed: 40,
+            finalPaid: 140,
+            paymentMode: 'UPI'
+          },
+          {
+            id: now - 3600000,
+            timestamp: now - 3600000,
+            timeStr: formatClockTime(now - 3600000),
+            stationName: 'PS5-03',
+            customerName: 'Varun Solo',
+            game: 'Marvel\'s Spider-Man 2',
+            players: 1,
+            durationMins: 60,
+            gamingFee: 70,
+            snacksFee: 0,
+            advanceDed: 0,
+            finalPaid: 70,
+            paymentMode: 'CASH'
+          }
+        ];
+        saveLedger();
+      }
+
+      saveStations();
+      playSound('start');
+      renderStations();
+      renderLedger();
+      showToast('Loaded Demo Busy Counter: 3 Active PS5s + Sample Today Revenue!', 'success');
+    }
+
+    function openRateCardModal() {
+      const m = document.getElementById('rateCardModal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+
+    function closeRateCardModal() {
+      const m = document.getElementById('rateCardModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    /*************************************************************************
+     * 14. TOAST NOTIFICATIONS & UTILITIES
+     *************************************************************************/
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const colorMap = {
+        success: 'border-emerald-500/60 bg-slate-900/95 text-emerald-300',
+        warning: 'border-amber-500/60 bg-slate-900/95 text-amber-300',
+        error:   'border-red-500/80 bg-slate-900/95 text-red-300',
+        info:    'border-cyan-500/60 bg-slate-900/95 text-cyan-300'
+      };
+      const iconMap = {
+        success: 'fa-circle-check text-emerald-400',
+        warning: 'fa-triangle-exclamation text-amber-400',
+        error:   'fa-bell text-red-400 animate-bounce',
+        info:    'fa-circle-info text-cyan-400'
+      };
+
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto border ${colorMap[type] || colorMap.info} rounded-xl px-4 py-3 shadow-2xl flex items-center gap-3 text-xs sm:text-sm font-medium transition-all duration-300`;
+      toast.innerHTML = `
+        <i class="fa-solid ${iconMap[type] || iconMap.info} text-base"></i>
+        <span class="flex-1">${escapeHtml(message)}</span>
+      `;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(20px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Boot Application
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStateFromStorage();
+      renderStations();
+      renderLedger();
+      renderQueue();
+      tickTimers();
+      setInterval(tickTimers, 1000);
+    });
+  </script>
+</body>
+</html>

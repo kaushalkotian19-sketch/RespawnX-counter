@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>RESPAWNX // Counter POS & Station Manager v4.0</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Orbitron, Inter, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Orbitron', 'sans-serif'],
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      background-color: #050811;
+      background-image:
+        radial-gradient(circle at 15% 0%, rgba(14, 165, 233, 0.14), transparent 45%),
+        radial-gradient(circle at 85% 10%, rgba(168, 85, 247, 0.12), transparent 45%);
+      color: #f1f5f9;
+      overflow-x: hidden;
+    }
+    .glass {
+      background: rgba(13, 19, 38, 0.86);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(56, 189, 248, 0.18);
+    }
+    .st-idle {
+      border: 1.5px solid rgba(30, 41, 74, 0.95);
+    }
+    .st-active {
+      border: 1.5px solid rgba(0, 240, 255, 0.75);
+      box-shadow: 0 0 28px rgba(0, 240, 255, 0.14);
+    }
+    .st-warn {
+      border: 1.5px solid rgba(245, 158, 11, 0.9);
+      box-shadow: 0 0 28px rgba(245, 158, 11, 0.22);
+    }
+    .st-over {
+      border: 1.5px solid rgba(239, 68, 68, 0.95);
+      animation: pulseOvertime 1.2s infinite alternate;
+    }
+    @keyframes pulseOvertime {
+      from { box-shadow: 0 0 14px rgba(239, 68, 68, 0.25); }
+      to { box-shadow: 0 0 32px rgba(239, 68, 68, 0.65); }
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #070b16; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-3 md:p-5 select-none font-sans">
+
+  <!-- TOP HEADER -->
+  <header class="max-w-7xl w-full mx-auto glass rounded-2xl p-3.5 md:p-4 mb-4 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center font-display font-black text-white text-base shadow-lg shadow-sky-500/25 shrink-0">
+        PS5
+      </div>
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="font-display font-black text-lg md:text-xl tracking-wider text-white">
+            RESPAWN<span class="text-sky-400">X</span>
+          </h1>
+          <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-400/30">
+            POS v4.0
+          </span>
+          <button onclick="openCloudModal()" id="cloudBadgeBtn" class="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25 transition flex items-center gap-1">
+            <span id="cloudDot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span id="cloudStatusText">CLOUD LIVE</span>
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-0.5">
+          Marian Paradise, 2nd Floor, Bikarnakatte, Mangaluru • 4× PS5 4K QLED HDR Lounge
+        </p>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <div id="liveClock" class="px-3 py-1.5 rounded-xl bg-slate-950/90 border border-slate-800 font-mono font-bold text-xs md:text-sm text-sky-300">
+        --:--:--
+      </div>
+      <button onclick="openCloudModal()" class="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-semibold transition">
+        ☁️ Cloud Sync
+      </button>
+      <button onclick="toggleAudio()" id="audioBtn" class="px-3 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-300 text-xs font-semibold transition">
+        🔊 Alerts ON
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="max-w-7xl w-full mx-auto flex-1 space-y-5">
+
+    <!-- KPI CARDS -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="glass rounded-2xl p-3.5">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active PS5 Stations</div>
+        <div class="flex items-baseline justify-between mt-1">
+          <span id="kpiActive" class="font-display font-black text-2xl text-sky-400">0 / 4</span>
+          <span id="kpiPlayers" class="text-xs font-mono text-slate-300">0 Players Live</span>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-3.5">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Live Running Tab</div>
+        <div class="flex items-baseline justify-between mt-1">
+          <span id="kpiRunning" class="font-display font-black text-2xl text-amber-400">₹0</span>
+          <span class="text-[11px] text-slate-400">Unbilled floor</span>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-3.5">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Today's Revenue</div>
+        <div class="flex items-baseline justify-between mt-1">
+          <span id="kpiRevenue" class="font-display font-black text-2xl text-emerald-400">₹0</span>
+          <span id="kpiSplit" class="text-[11px] font-mono text-slate-300">UPI: ₹0 • Cash: ₹0</span>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-3.5">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Completed Sessions</div>
+        <div class="flex items-baseline justify-between mt-1">
+          <span id="kpiSessions" class="font-display font-black text-2xl text-purple-400">0</span>
+          <span id="kpiDateLabel" class="text-[11px] font-mono text-slate-400">Today</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 PS5 TERMINALS -->
+    <section>
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h2 class="font-display font-extrabold text-xs md:text-sm tracking-wider uppercase text-sky-400">
+          ⚡ Live PS5 Floor Terminals (4 Stations)
+        </h2>
+        <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 font-medium">
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Available</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-sky-400"></span> In Session</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> &lt;5m Warning</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Time Up / Overtime</span>
+        </div>
+      </div>
+
+      <div id="stationsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </section>
+
+    <!-- TODAY'S COMPLETED BILLS LEDGER -->
+    <section class="glass rounded-2xl p-4 shadow-xl">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
+        <div>
+          <h3 class="font-display font-bold text-sm uppercase tracking-wider text-white">
+            📊 Today's Completed Bills Ledger
+          </h3>
+          <p class="text-[11px] text-slate-400">Automatically synced with Firebase <code class="text-sky-400">/pos_transactions</code></p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="relative flex-1 sm:w-64">
+            <input
+              id="ledgerSearch"
+              type="text"
+              oninput="renderLedger()"
+              placeholder="🔍 Search customer, game, station, mode..."
+              class="w-full px-3 py-1.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-white focus:outline-none focus:border-sky-400"
+            />
+          </div>
+          <button onclick="exportCSV()" class="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-semibold transition">
+            📥 Export CSV
+          </button>
+          <button onclick="openClearDayConfirm()" class="px-3 py-1.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 text-xs font-semibold transition">
+            🗑️ Clear Day
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs min-w-[640px]">
+          <thead class="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="py-2.5 px-2">Time</th>
+              <th class="py-2.5 px-2">Station</th>
+              <th class="py-2.5 px-2">Customer &amp; Game</th>
+              <th class="py-2.5 px-2">Players &amp; Time</th>
+              <th class="py-2.5 px-2">Snacks</th>
+              <th class="py-2.5 px-2">Payment Mode</th>
+              <th class="py-2.5 px-2 text-right">Paid</th>
+              <th class="py-2.5 px-2 text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="ledgerBody" class="divide-y divide-slate-800/60 text-slate-200"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- NOVAFORGE STUDIOS CYBERPUNK FOOTER -->
+  <footer class="max-w-7xl w-full mx-auto mt-6 glass rounded-2xl p-4 flex flex-col lg:flex-row items-center justify-between gap-3 text-xs">
+    <div class="text-center lg:text-left">
+      <div class="font-display font-bold text-sky-400 tracking-wider">
+        RESPAWNX GAMING LOUNGE • BIKARNAKATTE, MANGALURU • COUNTER POS TERMINAL v4.0
+      </div>
+      <div class="text-[11px] text-slate-400 mt-0.5">
+        Official Counter Billing &amp; Real-Time Station Controller • UPI: <span class="font-mono text-slate-300">Karthikbhat969-2@okicici</span>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-center gap-2">
+      <a href="https://novaforge-site.vercel.app/" target="_blank" rel="noopener"
+         class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 hover:from-sky-500/30 hover:to-purple-500/30 border border-sky-400/40 text-white font-semibold transition flex items-center gap-1.5 shadow-lg shadow-sky-500/10">
+        <span>⚡ Designed &amp; Engineered by</span>
+        <span class="font-display font-bold text-sky-300 underline">NovaForge Studios</span>
+        <span class="text-slate-300">(Kaushal Kotian) ↗</span>
+      </a>
+      <a href="https://kaushalkotian19.github.io" target="_blank" rel="noopener"
+         class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-sky-300 text-[11px] font-mono transition">
+        Portfolio
+      </a>
+      <a href="https://github.com/Kaushalkotian19" target="_blank" rel="noopener"
+         class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-sky-300 text-[11px] font-mono transition">
+        GitHub @Kaushalkotian19
+      </a>
+      <a href="https://instagram.com/mr_kaushal_kotian" target="_blank" rel="noopener"
+         class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-pink-400 text-[11px] font-mono transition">
+        IG @mr_kaushal_kotian
+      </a>
+      <a href="https://x.com/kaush06060" target="_blank" rel="noopener"
+         class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-sky-400 text-[11px] font-mono transition">
+        X @kaush06060
+      </a>
+    </div>
+  </footer>
+
+  <!-- MODAL 1: SNACKS & DRINKS (+ CUSTOM ITEM) -->
+  <div id="snackModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="glass rounded-2xl max-w-md w-full p-5 border border-amber-400/40 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+        <h3 id="snackModalTitle" class="font-display font-bold text-base text-amber-300">🍿 Add Snacks &amp; Drinks</h3>
+        <button onclick="closeModal('snackModal')" class="text-slate-400 hover:text-white text-lg font-bold px-2">✕</button>
+      </div>
+
+      <!-- Preset Snack Buttons -->
+      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Quick Add Presets</div>
+      <div class="grid grid-cols-2 gap-2.5 mb-4">
+        <button onclick="addSnackToStation('Water Bottle', 20)" class="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-left transition flex justify-between items-center">
+          <span class="text-xs font-semibold text-white">💧 Water Bottle</span>
+          <span class="font-mono text-xs font-bold text-sky-400">+₹20</span>
+        </button>
+        <button onclick="addSnackToStation('Cold Drink', 40)" class="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-left transition flex justify-between items-center">
+          <span class="text-xs font-semibold text-white">🥤 Cold Drink</span>
+          <span class="font-mono text-xs font-bold text-sky-400">+₹40</span>
+        </button>
+        <button onclick="addSnackToStation('Chips Pack', 30)" class="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-left transition flex justify-between items-center">
+          <span class="text-xs font-semibold text-white">🍟 Chips Pack</span>
+          <span class="font-mono text-xs font-bold text-sky-400">+₹30</span>
+        </button>
+        <button onclick="addSnackToStation('Energy Drink', 125)" class="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-left transition flex justify-between items-center">
+          <span class="text-xs font-semibold text-white">⚡ Energy Drink</span>
+          <span class="font-mono text-xs font-bold text-sky-400">+₹125</span>
+        </button>
+      </div>
+
+      <!-- Custom Snack / Add-on Row -->
+      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Custom Snack / Extra Item</div>
+      <div class="flex gap-2 mb-4">
+        <input id="customSnackName" type="text" placeholder="Item name (e.g. Maggi / Coffee)"
+               class="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-amber-400" />
+        <input id="customSnackPrice" type="number" placeholder="₹ Price"
+               class="w-24 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-white focus:outline-none focus:border-amber-400" />
+        <button onclick="addCustomSnack()" class="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs shrink-0">
+          + Add
+        </button>
+      </div>
+
+      <!-- Current Station Snack List -->
+      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Added to This Station</div>
+      <div id="snackItemsList" class="space-y-1.5 max-h-36 overflow-y-auto mb-4 pr-1"></div>
+
+      <button onclick="closeModal('snackModal')" class="w-full py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-display font-bold text-xs tracking-wider">
+        DONE
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 2: STATION TRANSFER (⇄ MOVE) -->
+  <div id="moveModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="glass rounded-2xl max-w-md w-full p-5 border border-sky-400/40 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+        <h3 id="moveModalTitle" class="font-display font-bold text-base text-sky-400">⇄ Transfer Running Session</h3>
+        <button onclick="closeModal('moveModal')" class="text-slate-400 hover:text-white text-lg font-bold px-2">✕</button>
+      </div>
+      <p class="text-xs text-slate-300 mb-3">
+        Select an <span class="text-emerald-400 font-semibold">Available</span> PS5 station below to seamlessly transfer the active timer, customer, game, and snacks:
+      </p>
+      <div id="moveTargetsContainer" class="space-y-2 mb-4"></div>
+      <button onclick="closeModal('moveModal')" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 3: SMART CHECKOUT (UPI / CASH / SPLIT PAYMENT) -->
+  <div id="checkoutModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="glass rounded-2xl max-w-md w-full p-5 border border-emerald-400/40 shadow-2xl max-h-[94vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+        <div>
+          <h3 id="chkTitle" class="font-display font-bold text-base text-emerald-400">💳 Station Checkout</h3>
+          <p id="chkSubtitle" class="text-[11px] text-slate-400">Itemized Session Bill</p>
+        </div>
+        <button onclick="closeModal('checkoutModal')" class="text-slate-400 hover:text-white text-lg font-bold px-2">✕</button>
+      </div>
+
+      <!-- Itemized Breakdown -->
+      <div class="bg-slate-950/90 rounded-xl p-3.5 space-y-2 text-xs border border-slate-800 mb-3.5">
+        <div class="flex justify-between">
+          <span class="text-slate-400">Customer &amp; Game:</span>
+          <span id="chkCustGame" class="font-semibold text-white text-right">-</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Players &amp; Billable Time:</span>
+          <span id="chkPlayersTime" class="font-mono text-sky-300">-</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Gaming Slab Charge:</span>
+          <span id="chkGamingCost" class="font-mono text-white">₹0</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Snacks &amp; Drinks:</span>
+          <span id="chkSnacksCost" class="font-mono text-amber-300">₹0</span>
+        </div>
+        <div class="flex justify-between text-emerald-400">
+          <span>Online Advance Paid:</span>
+          <span id="chkAdvanceDed" class="font-mono">-₹0</span>
+        </div>
+        <div class="border-t border-slate-800 pt-2.5 flex items-center justify-between">
+          <span class="font-bold text-sm text-white">Final Payable (₹):</span>
+          <input
+            id="chkFinalInput"
+            type="number"
+            min="0"
+            oninput="onFinalPayableInput()"
+            class="w-28 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-emerald-500/60 text-right font-mono font-extrabold text-base text-emerald-400 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <!-- Dynamic UPI QR Card -->
+      <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-800 flex items-center gap-3.5 mb-3.5">
+        <div class="bg-white p-1.5 rounded-xl shrink-0">
+          <img id="chkQrImg" src="" alt="UPI QR" class="w-24 h-24 rounded-lg block" />
+        </div>
+        <div class="text-xs space-y-1.5 flex-1">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-sky-300 text-[11px] uppercase tracking-wider">Scan to Pay UPI</span>
+            <span id="qrAmtBadge" class="font-mono font-bold text-emerald-400 text-xs">₹0</span>
+          </div>
+          <div class="font-mono text-[11px] text-white bg-slate-950 px-2 py-1 rounded border border-slate-800 break-all">
+            Karthikbhat969-2@okicici
+          </div>
+          <div class="flex items-center justify-between pt-0.5">
+            <span class="text-[10px] text-slate-400">RESPAWNX Gaming Lounge</span>
+            <button onclick="copyUpiId()" class="px-2 py-0.5 rounded bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/30 text-sky-300 text-[10px] font-semibold">
+              Copy UPI ID
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1-Tap Full Payment Buttons -->
+      <div class="grid grid-cols-2 gap-2.5 mb-2.5">
+        <button onclick="completeCheckout('UPI')" class="py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-display font-black text-xs tracking-wider shadow-lg shadow-emerald-500/20 transition">
+          ✅ PAID VIA UPI
+        </button>
+        <button onclick="completeCheckout('CASH')" class="py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-black text-xs tracking-wider shadow-lg shadow-amber-400/20 transition">
+          💵 PAID CASH
+        </button>
+      </div>
+
+      <!-- Split Payment Toggle & Section -->
+      <button onclick="toggleSplitBox()" class="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-purple-500/40 text-purple-300 font-semibold text-xs transition mb-2">
+        ⚡ Split Payment (UPI + Cash)
+      </button>
+
+      <div id="splitBox" class="hidden bg-slate-950/95 rounded-xl p-3 border border-purple-500/40 space-y-2.5 text-xs">
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-[10px] uppercase text-slate-400 font-semibold block mb-1">💵 Cash Amount (₹)</label>
+            <input id="splitCashInput" type="number" min="0" oninput="onSplitCashChange()"
+                   class="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 font-mono text-amber-300 font-bold" />
+          </div>
+          <div>
+            <label class="text-[10px] uppercase text-slate-400 font-semibold block mb-1">📱 UPI Amount (₹)</label>
+            <input id="splitUpiInput" type="number" min="0" oninput="onSplitUpiChange()"
+                   class="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 font-mono text-emerald-400 font-bold" />
+          </div>
+        </div>
+        <button onclick="completeCheckout('SPLIT')" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-sky-500 hover:from-purple-400 hover:to-sky-400 text-slate-950 font-display font-black text-xs tracking-wider">
+          ✅ CONFIRM SPLIT BILL (UPI + CASH)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: CLOUD SYNC MANAGER -->
+  <div id="cloudModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="glass rounded-2xl max-w-md w-full p-5 border border-emerald-400/40 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+        <h3 class="font-display font-bold text-base text-emerald-400">☁️ Firebase Realtime Database Sync</h3>
+        <button onclick="closeModal('cloudModal')" class="text-slate-400 hover:text-white text-lg font-bold px-2">✕</button>
+      </div>
+
+      <p class="text-xs text-slate-300 mb-3 leading-relaxed">
+        Station timers run <span class="text-sky-300 font-semibold">100% locally on hardware timestamps</span> so they never auto-cancel. Every start, pause, extension, transfer, and completed bill pushes directly to your Firebase database:
+      </p>
+
+      <div class="bg-slate-950 rounded-xl p-2.5 border border-slate-800 text-[11px] font-mono text-slate-300 space-y-1 mb-3">
+        <div>• Live Stations: <span class="text-sky-400">/pos_stations</span></div>
+        <div>• Daily Bills: <span class="text-emerald-400">/pos_transactions/<span id="cloudDateKeyPreview"></span></span></div>
+        <div>• Last Sync: <span id="lastSyncTimeLabel" class="text-amber-300">Ready</span></div>
+      </div>
+
+      <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Firebase Database URL</label>
+      <input id="fbUrlInput" type="url"
+             class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-white mb-3 focus:outline-none focus:border-sky-400" />
+
+      <div class="grid grid-cols-2 gap-2.5 mb-2.5">
+        <button onclick="pushAllToFirebase(true)" class="py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs">
+          📤 Push to Cloud
+        </button>
+        <button onclick="pullAllFromFirebase(true)" class="py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-300 font-semibold text-xs">
+          📥 Pull from Cloud
+        </button>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="restoreDefaultFirebaseUrl()" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+          Restore Default URL
+        </button>
+        <button onclick="saveFirebaseUrlFromModal()" class="flex-1 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs">
+          Save &amp; Sync
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: CONFIRMATION DIALOG (NO NATIVE ALERT/CONFIRM) -->
+  <div id="confirmModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="glass rounded-2xl max-w-sm w-full p-5 border border-red-500/40 shadow-2xl">
+      <h3 id="confirmTitle" class="font-display font-bold text-base text-white mb-2">Confirm Action</h3>
+      <p id="confirmMessage" class="text-xs text-slate-300 mb-4 leading-relaxed"></p>
+      <div class="grid grid-cols-2 gap-2.5">
+        <button onclick="closeModal('confirmModal')" class="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs">
+          Cancel
+        </button>
+        <button id="confirmActionBtn" class="py-2.5 rounded-xl bg-red-500 hover:bg-red-400 text-slate-950 font-bold text-xs">
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-xs pointer-events-none"></div>
+
+  <script>
+    /*************************************************************************
+     * 1. SAFE STORAGE WRAPPER (PREVENTS SANDBOX SECURITY/QUOTA CRASHES)
+     *************************************************************************/
+    const memoryStorageFallback = {};
+
+    function safeGetItem(key) {
+      try {
+        const val = window.localStorage.getItem(key);
+        return val !== null ? val : (memoryStorageFallback[key] || null);
+      } catch (err) {
+        return memoryStorageFallback[key] || null;
+      }
+    }
+
+    function safeSetItem(key, value) {
+      memoryStorageFallback[key] = String(value);
+      try {
+        window.localStorage.setItem(key, String(value));
+      } catch (err) {
+        // Safely ignore storage errors in restricted webviews
+      }
+    }
+
+    /*************************************************************************
+     * 2. CONSTANTS & CONFIGURATION
+     *************************************************************************/
+    const DEFAULT_FIREBASE_URL = "https://respawnx-ccdfc-default-rtdb.asia-southeast1.firebasedatabase.app";
+    const OFFICIAL_UPI_ID = "Karthikbhat969-2@okicici";
+    const OFFICIAL_PAYEE_NAME = "RESPAWNX Gaming Lounge";
+
+    const STORAGE_KEYS = {
+      STATIONS: "rx_pos_v40_stations",
+      LEDGER: "rx_pos_v40_ledger",
+      FB_URL: "rx_pos_v40_fb_url"
+    };
+
+    const PS5_GAMES = [
+      "GTA VI / GTA Online",
+      "EA Sports FC 26 (FIFA)",
+      "WWE 2K25",
+      "Call of Duty: Black Ops III",
+      "God of War Ragnarök",
+      "Marvel's Spider-Man 2",
+      "Mortal Kombat 1",
+      "Gran Turismo 7 / Gear Club",
+      "It Takes Two",
+      "Rocket League",
+      "Minecraft"
+    ];
+
+    function getTodayDateKey() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    let firebaseUrl = (safeGetItem(STORAGE_KEYS.FB_URL) || DEFAULT_FIREBASE_URL).replace(/\/+$/, "");
+    let audioEnabled = true;
+    let sharedAudioCtx = null;
+
+    let activeSnackStationId = null;
+    let activeMoveStationId = null;
+    let activeCheckoutStationId = null;
+
+    function createDefaultStations() {
+      return [1, 2, 3, 4].map(id => ({
+        id,
+        code: `PS5-0${id}`,
+        status: "IDLE", // IDLE | ACTIVE | PAUSED
+        customer: "",
+        game: PS5_GAMES[id - 1] || PS5_GAMES[0],
+        players: id === 2 ? 2 : 1,
+        durationMins: 60, // 0 = Open Stopwatch
+        advancePaid: false,
+        startTime: null,
+        pausedElapsedMs: 0,
+        snacks: [],
+        warned5m: false,
+        warnedEnd: false,
+        updatedAt: Date.now()
+      }));
+    }
+
+    function loadInitialStations() {
+      try {
+        const raw = safeGetItem(STORAGE_KEYS.STATIONS);
+        if (!raw) return createDefaultStations();
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || parsed.length !== 4) return createDefaultStations();
+        const defaults = createDefaultStations();
+        return defaults.map((def, i) => ({
+          ...def,
+          ...parsed[i],
+          id: i + 1,
+          code: `PS5-0${i + 1}`,
+          snacks: Array.isArray(parsed[i]?.snacks) ? parsed[i].snacks : []
+        }));
+      } catch (e) {
+        return createDefaultStations();
+      }
+    }
+
+    function loadInitialLedger() {
+      try {
+        const raw = safeGetItem(STORAGE_KEYS.LEDGER);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    let stations = loadInitialStations();
+    let ledger = loadInitialLedger();
+
+    /*************************************************************************
+     * 3. PRICING & BILLING ENGINE (OFFICIAL RESPAWNX SLABS)
+     * 1P: ₹40/30m, ₹70/hr | 2P: ₹80/30m, ₹140/hr | 3P: ₹120/30m, ₹210/hr | 4P: ₹160/30m, ₹280/hr
+     *************************************************************************/
+    function calculateGamingCharge(players, mins) {
+      const p = Math.max(1, Math.min(4, Number(players) || 1));
+      const effectiveMins = Math.max(1, Math.round(Number(mins) || 60));
+      // 5-minute grace buffer after 30 mins
+      const blocksOf30 = Math.max(1, Math.ceil((effectiveMins - 5) / 30));
+      const fullHours = Math.floor(blocksOf30 / 2);
+      const remHalf = blocksOf30 % 2;
+      const perPlayer = (fullHours * 70) + (remHalf * 40);
+      return perPlayer * p;
+    }
+
+    function getElapsedMs(st) {
+      if (!st || st.status === "IDLE") return 0;
+      if (st.status === "PAUSED") return Number(st.pausedElapsedMs) || 0;
+      const started = Number(st.startTime) || Date.now();
+      return (Number(st.pausedElapsedMs) || 0) + Math.max(0, Date.now() - started);
+    }
+
+    function getStationBill(st) {
+      const elapsedMs = getElapsedMs(st);
+      const elapsedMins = Math.max(1, Math.ceil(elapsedMs / 60000));
+      const billableMins = st.durationMins > 0 ? Number(st.durationMins) : elapsedMins;
+      const gamingCharge = calculateGamingCharge(st.players, billableMins);
+      const snacksTotal = (st.snacks || []).reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+      const advanceDed = st.advancePaid ? (Number(st.players) * 20) : 0;
+      const netPayable = Math.max(0, gamingCharge + snacksTotal - advanceDed);
+      return {
+        elapsedMs,
+        elapsedMins,
+        billableMins,
+        gamingCharge,
+        snacksTotal,
+        advanceDed,
+        netPayable
+      };
+    }
+
+    /*************************************************************************
+     * 4. PERSISTENCE & STRUCTURED FIREBASE REALTIME DATABASE SYNC
+     *************************************************************************/
+    function saveState(syncStationsToCloud = true, syncLedgerToCloud = false) {
+      safeSetItem(STORAGE_KEYS.STATIONS, JSON.stringify(stations));
+      safeSetItem(STORAGE_KEYS.LEDGER, JSON.stringify(ledger));
+      if (syncStationsToCloud) pushStationsToFirebase();
+      if (syncLedgerToCloud) pushTodayTransactionsToFirebase();
+    }
+
+    function setCloudBadgeState(isOnline, labelText) {
+      const dot = document.getElementById("cloudDot");
+      const txt = document.getElementById("cloudStatusText");
+      if (!dot || !txt) return;
+      dot.className = `w-1.5 h-1.5 rounded-full ${isOnline ? "bg-emerald-400" : "bg-amber-400"}`;
+      txt.textContent = labelText || (isOnline ? "CLOUD LIVE" : "LOCAL MODE");
+    }
+
+    async function pushStationsToFirebase() {
+      if (!firebaseUrl) return;
+      const payload = {};
+      stations.forEach(st => {
+        payload[st.code] = { ...st, syncedAt: Date.now() };
+      });
+      try {
+        const res = await fetch(`${firebaseUrl}/pos_stations.json`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          setCloudBadgeState(true, "CLOUD LIVE");
+          const syncLbl = document.getElementById("lastSyncTimeLabel");
+          if (syncLbl) syncLbl.textContent = new Date().toLocaleTimeString();
+        } else {
+          setCloudBadgeState(false, "LOCAL ACTIVE");
+        }
+      } catch (e) {
+        setCloudBadgeState(false, "LOCAL ACTIVE");
+      }
+    }
+
+    async function pushTodayTransactionsToFirebase() {
+      if (!firebaseUrl) return;
+      const dateKey = getTodayDateKey();
+      try {
+        const res = await fetch(`${firebaseUrl}/pos_transactions/${dateKey}.json`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(ledger)
+        });
+        if (res.ok) {
+          setCloudBadgeState(true, "CLOUD LIVE");
+          const syncLbl = document.getElementById("lastSyncTimeLabel");
+          if (syncLbl) syncLbl.textContent = new Date().toLocaleTimeString();
+        }
+      } catch (e) {
+        setCloudBadgeState(false, "LOCAL ACTIVE");
+      }
+    }
+
+    async function pushAllToFirebase(showNotice) {
+      await Promise.all([pushStationsToFirebase(), pushTodayTransactionsToFirebase()]);
+      if (showNotice) showToast("☁️ Synced stations & today's bills to Firebase!");
+    }
+
+    // Startup cloud ledger merge (never overwrites active local timers!)
+    async function loadTodayTransactionsFromCloudOnBoot() {
+      if (!firebaseUrl) return;
+      const dateKey = getTodayDateKey();
+      try {
+        const res = await fetch(`${firebaseUrl}/pos_transactions/${dateKey}.json`);
+        if (!res.ok) return;
+        const cloudData = await res.json();
+        if (!cloudData) return;
+
+        const cloudList = Array.isArray(cloudData)
+          ? cloudData.filter(Boolean)
+          : Object.values(cloudData).filter(Boolean);
+
+        if (cloudList.length > 0) {
+          const existingIds = new Set(ledger.map(item => String(item.id)));
+          let added = 0;
+          cloudList.forEach(item => {
+            if (item && item.id && !existingIds.has(String(item.id))) {
+              ledger.push(item);
+              existingIds.add(String(item.id));
+              added++;
+            }
+          });
+          if (added > 0) {
+            ledger.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+            safeSetItem(STORAGE_KEYS.LEDGER, JSON.stringify(ledger));
+            renderLedger();
+            updateKPIs();
+          }
+        }
+        setCloudBadgeState(true, "CLOUD LIVE");
+      } catch (e) {
+        setCloudBadgeState(false, "LOCAL ACTIVE");
+      }
+    }
+
+    async function pullAllFromFirebase(showNotice) {
+      if (!firebaseUrl) return;
+      const dateKey = getTodayDateKey();
+      try {
+        const [stRes, txRes] = await Promise.all([
+          fetch(`${firebaseUrl}/pos_stations.json`),
+          fetch(`${firebaseUrl}/pos_transactions/${dateKey}.json`)
+        ]);
+
+        if (stRes.ok) {
+          const stData = await stRes.json();
+          if (stData && typeof stData === "object") {
+            const defaults = createDefaultStations();
+            stations = defaults.map((def, idx) => {
+              const code = `PS5-0${idx + 1}`;
+              const remote = stData[code] || stData[idx];
+              if (!remote) return def;
+              return {
+                ...def,
+                ...remote,
+                id: idx + 1,
+                code,
+                snacks: Array.isArray(remote.snacks) ? remote.snacks : []
+              };
+            });
+          }
+        }
+
+        if (txRes.ok) {
+          const txData = await txRes.json();
+          if (txData) {
+            ledger = Array.isArray(txData)
+              ? txData.filter(Boolean)
+              : Object.values(txData).filter(Boolean);
+          }
+        }
+
+        safeSetItem(STORAGE_KEYS.STATIONS, JSON.stringify(stations));
+        safeSetItem(STORAGE_KEYS.LEDGER, JSON.stringify(ledger));
+        renderStations();
+        renderLedger();
+        updateKPIs();
+        closeModal("cloudModal");
+        if (showNotice) showToast("📥 Restored stations & bills from Firebase Cloud!");
+      } catch (err) {
+        showToast("⚠️ Could not reach Firebase Cloud.");
+      }
+    }
+
+    /*************************************************************************
+     * 5. WEB AUDIO SYNTHESIZER & TOASTS
+     *************************************************************************/
+    function playSound(type) {
+      if (!audioEnabled) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        if (!sharedAudioCtx) sharedAudioCtx = new AudioCtx();
+        if (sharedAudioCtx.state === "suspended") sharedAudioCtx.resume();
+
+        const now = sharedAudioCtx.currentTime;
+        const notes = type === "start" ? [523.25, 659.25, 783.99]
+                    : type === "warn"  ? [587.33, 880]
+                    : [880, 440, 880];
+
+        notes.forEach((freq, i) => {
+          const osc = sharedAudioCtx.createOscillator();
+          const gain = sharedAudioCtx.createGain();
+          osc.type = type === "over" ? "sawtooth" : "sine";
+          osc.frequency.setValueAtTime(freq, now + i * 0.11);
+          gain.gain.setValueAtTime(0.12, now + i * 0.11);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.11 + 0.22);
+          osc.connect(gain);
+          gain.connect(sharedAudioCtx.destination);
+          osc.start(now + i * 0.11);
+          osc.stop(now + i * 0.11 + 0.22);
+        });
+      } catch (e) {}
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      const btn = document.getElementById("audioBtn");
+      if (btn) btn.textContent = audioEnabled ? "🔊 Alerts ON" : "🔇 Alerts OFF";
+      if (audioEnabled) playSound("start");
+    }
+
+    function showToast(message) {
+      const box = document.getElementById("toastContainer");
+      if (!box) return;
+      const el = document.createElement("div");
+      el.className = "glass px-3.5 py-2.5 rounded-xl border-l-4 border-sky-400 text-xs font-semibold text-white shadow-xl";
+      el.textContent = message;
+      box.appendChild(el);
+      setTimeout(() => {
+        el.remove();
+      }, 3200);
+    }
+
+    function escapeHtml(str) {
+      return String(str || "").replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[ch]));
+    }
+
+    /*************************************************************************
+     * 6. RENDER 4 PS5 FLOOR TERMINALS
+     *************************************************************************/
+    function renderStations() {
+      const grid = document.getElementById("stationsGrid");
+      if (!grid) return;
+
+      grid.innerHTML = stations.map(st => {
+        if (st.status === "IDLE") {
+          const previewPrice = calculateGamingCharge(st.players, st.durationMins || 60);
+          const advAmount = st.players * 20;
+
+          return `
+            <div class="glass st-idle rounded-2xl p-4 flex flex-col justify-between gap-3.5 transition">
+              <div class="space-y-3">
+                <!-- Station Header -->
+                <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-display font-black text-sm flex items-center justify-center">
+                      0${st.id}
+                    </span>
+                    <div>
+                      <h3 class="font-display font-bold text-base text-white">${st.code}</h3>
+                      <p class="text-[11px] text-slate-400">43" 4K QLED HDR • DualSense</p>
+                    </div>
+                  </div>
+                  <span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                    ● AVAILABLE
+                  </span>
+                </div>
+
+                <!-- Customer & Game -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label class="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Customer Name / Tag</label>
+                    <input
+                      type="text"
+                      value="${escapeHtml(st.customer)}"
+                      oninput="updateIdleInput(${st.id}, 'customer', this.value)"
+                      placeholder="Walk-in Player (Optional)"
+                      class="w-full px-3 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-white focus:outline-none focus:border-sky-400"
+                    />
+                  </div>
+                  <div>
+                    <label class="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Select PS5 Game</label>
+                    <select
+                      onchange="updateIdleInput(${st.id}, 'game', this.value)"
+                      class="w-full px-3 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-white focus:outline-none focus:border-sky-400"
+                    >
+                      ${PS5_GAMES.map(g => `<option value="${escapeHtml(g)}" ${st.game === g ? "selected" : ""}>${escapeHtml(g)}</option>`).join("")}
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Players (Controllers) -->
+                <div>
+                  <div class="flex items-center justify-between text-[10px] uppercase tracking-wider font-bold mb-1">
+                    <span class="text-slate-400">Players (Controllers)</span>
+                    <span class="text-sky-400 font-mono">₹${st.players * 40}/30m • ₹${st.players * 70}/hr</span>
+                  </div>
+                  <div class="grid grid-cols-4 gap-2">
+                    ${[1, 2, 3, 4].map(p => `
+                      <button
+                        onclick="setIdleOption(${st.id}, 'players', ${p})"
+                        class="py-2 rounded-xl font-mono text-xs font-extrabold border transition ${
+                          st.players === p
+                            ? "bg-sky-500/25 border-sky-400 text-sky-300 shadow-sm shadow-sky-500/20"
+                            : "bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700"
+                        }"
+                      >
+                        ${p}P
+                      </button>
+                    `).join("")}
+                  </div>
+                </div>
+
+                <!-- Session Timer Mode -->
+                <div>
+                  <label class="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Session Timer Mode</label>
+                  <div class="grid grid-cols-3 gap-2">
+                    ${[
+                      { label: "30 Min", val: 30 },
+                      { label: "1 Hour", val: 60 },
+                      { label: "1.5 Hrs", val: 90 },
+                      { label: "2 Hours", val: 120 },
+                      { label: "3 Hours", val: 180 },
+                      { label: "Open ⏱️", val: 0 }
+                    ].map(mode => `
+                      <button
+                        onclick="setIdleOption(${st.id}, 'durationMins', ${mode.val})"
+                        class="py-2 rounded-xl text-xs font-bold border transition ${
+                          st.durationMins === mode.val
+                            ? "bg-indigo-500/25 border-indigo-400 text-indigo-200"
+                            : "bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700"
+                        }"
+                      >
+                        ${mode.label}
+                      </button>
+                    `).join("")}
+                  </div>
+                </div>
+
+                <!-- Online Advance Paid Checkbox -->
+                <label class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-950/80 border border-slate-800 cursor-pointer text-xs">
+                  <span class="text-slate-300 font-medium">🛡️ Online Advance Paid (<span class="text-emerald-400 font-mono">₹${advAmount}</span>)</span>
+                  <input
+                    type="checkbox"
+                    ${st.advancePaid ? "checked" : ""}
+                    onchange="setIdleOption(${st.id}, 'advancePaid', this.checked)"
+                    class="w-4 h-4 accent-sky-400 rounded"
+                  />
+                </label>
+              </div>
+
+              <button
+                onclick="startStation(${st.id})"
+                class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-500 hover:from-sky-300 hover:to-indigo-400 text-slate-950 font-display font-black text-xs md:text-sm tracking-wider shadow-lg shadow-sky-500/20 transition"
+              >
+                ▶ START ${st.code} (${st.durationMins > 0 ? "₹" + previewPrice : "OPEN STOPWATCH"})
+              </button>
+            </div>
+          `;
+        }
+
+        // ACTIVE OR PAUSED SESSION CARD
+        const bill = getStationBill(st);
+        const startClockStr = st.startTime
+          ? new Date(st.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : "Paused";
+
+        return `
+          <div id="card-${st.id}" class="glass st-active rounded-2xl p-4 flex flex-col justify-between gap-3.5 transition">
+            <div class="space-y-3">
+              <!-- Active Header -->
+              <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-400/50 text-sky-300 font-display font-black text-sm flex items-center justify-center">
+                    0${st.id}
+                  </span>
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <h3 class="font-display font-bold text-base text-white">${st.code}</h3>
+                      <span class="text-xs font-mono font-bold text-sky-400">• ${st.players}P</span>
+                    </div>
+                    <p class="text-xs text-sky-200 font-semibold">${escapeHtml(st.customer || "Walk-in Player")} <span class="text-slate-400 font-normal">• ${escapeHtml(st.game)}</span></p>
+                  </div>
+                </div>
+                <span id="badge-${st.id}" class="px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/40 text-[10px] font-mono font-bold">
+                  ${st.status === "PAUSED" ? "⏸ PAUSED" : "● IN SESSION"}
+                </span>
+              </div>
+
+              <!-- Digital Clock Box -->
+              <div class="bg-slate-950/95 rounded-2xl p-3.5 border border-slate-800 text-center">
+                <div class="flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">
+                  <span>${st.durationMins > 0 ? `Countdown (${st.durationMins}m)` : "Open Stopwatch"}</span>
+                  <span>Started: ${startClockStr}</span>
+                </div>
+                <div id="clock-${st.id}" class="font-mono font-extrabold text-3xl md:text-4xl text-sky-300 tracking-wider my-1">
+                  00:00:00
+                </div>
+                <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-2">
+                  <div id="bar-${st.id}" class="h-full bg-sky-400 transition-all duration-300" style="width: 100%"></div>
+                </div>
+              </div>
+
+              <!-- Running Bill & Mid-Session Add-ons -->
+              <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs">
+                <div>
+                  <span class="text-slate-400">Running Bill:</span>
+                  <span id="bill-${st.id}" class="font-display font-black text-base text-emerald-400 ml-1">₹${bill.netPayable}</span>
+                  ${bill.snacksTotal > 0 ? `<span class="text-[11px] font-mono text-amber-300 ml-1">(+₹${bill.snacksTotal} snacks)</span>` : ""}
+                  ${bill.advanceDed > 0 ? `<span class="text-[11px] font-mono text-emerald-400 ml-1">(-₹${bill.advanceDed} adv)</span>` : ""}
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <button onclick="cyclePlayersMidSession(${st.id})" title="Change Player Count" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-mono font-bold text-[11px]">
+                    👥 ${st.players}P
+                  </button>
+                  <button onclick="openSnackModal(${st.id})" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 font-semibold text-[11px]">
+                    🍿 +Snacks
+                  </button>
+                  <button onclick="openMoveModal(${st.id})" class="px-2.5 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-300 font-semibold text-[11px]">
+                    ⇄ Move
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick Time Extensions + Pause -->
+              <div class="grid grid-cols-4 gap-2 text-xs font-bold">
+                <button onclick="extendStation(${st.id}, 15)" class="py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-sky-300 transition">+15m</button>
+                <button onclick="extendStation(${st.id}, 30)" class="py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-sky-300 transition">+30m</button>
+                <button onclick="extendStation(${st.id}, 60)" class="py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-sky-300 transition">+1 Hr</button>
+                <button onclick="togglePauseStation(${st.id})" class="py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 text-amber-300 transition">
+                  ${st.status === "PAUSED" ? "▶ Resume" : "⏸ Pause"}
+                </button>
+              </div>
+            </div>
+
+            <!-- End & Bill + Reset -->
+            <div class="grid grid-cols-3 gap-2 pt-1">
+              <button
+                onclick="openCheckoutModal(${st.id})"
+                class="col-span-2 py-3 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 font-display font-black text-xs md:text-sm tracking-wider shadow-lg shadow-emerald-500/20 transition"
+              >
+                💳 END &amp; BILL
+              </button>
+              <button
+                onclick="promptResetStation(${st.id})"
+                class="py-3 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-red-300 font-bold text-xs transition"
+              >
+                ✕ Reset
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      updateLiveClocks();
+      updateKPIs();
+    }
+
+    /*************************************************************************
+     * 7. STATION CONTROLS & TRANSFER (⇄ MOVE)
+     *************************************************************************/
+    function updateIdleInput(id, field, value) {
+      const st = stations.find(s => s.id === id);
+      if (!st || st.status !== "IDLE") return;
+      st[field] = value;
+      st.updatedAt = Date.now();
+      safeSetItem(STORAGE_KEYS.STATIONS, JSON.stringify(stations));
+    }
+
+    function setIdleOption(id, field, value) {
+      const st = stations.find(s => s.id === id);
+      if (!st || st.status !== "IDLE") return;
+      st[field] = value;
+      st.updatedAt = Date.now();
+      renderStations();
+      saveState(false, false);
+    }
+
+    function startStation(id) {
+      const st = stations.find(s => s.id === id);
+      if (!st) return;
+      st.status = "ACTIVE";
+      st.startTime = Date.now();
+      st.pausedElapsedMs = 0;
+      st.snacks = [];
+      st.warned5m = false;
+      st.warnedEnd = false;
+      st.updatedAt = Date.now();
+
+      playSound("start");
+      renderStations();
+      saveState(true, false);
+      showToast(`▶ ${st.code} started (${st.players}P • ${st.durationMins > 0 ? st.durationMins + "m" : "Stopwatch"})`);
+    }
+
+    function togglePauseStation(id) {
+      const st = stations.find(s => s.id === id);
+      if (!st || st.status === "IDLE") return;
+
+      if (st.status === "ACTIVE") {
+        st.pausedElapsedMs = getElapsedMs(st);
+        st.startTime = null;
+        st.status = "PAUSED";
+        showToast(`⏸ ${st.code} paused`);
+      } else if (st.status === "PAUSED") {
+        st.startTime = Date.now();
+        st.status = "ACTIVE";
+        showToast(`▶ ${st.code} resumed`);
+      }
+      st.updatedAt = Date.now();
+      renderStations();
+      saveState(true, false);
+    }
+
+    function extendStation(id, addMins) {
+      const st = stations.find(s => s.id === id);
+      if (!st || st.status === "IDLE") return;
+      if (st.durationMins === 0) {
+        const currentMins = Math.ceil(getElapsedMs(st) / 60000);
+        st.durationMins = currentMins + addMins;
+      } else {
+        st.durationMins = Number(st.durationMins) + addMins;
+      }
+      st.warned5m = false;
+      st.warnedEnd = false;
+      st.updatedAt = Date.now();
+      renderStations();
+      saveState(true, false);
+      showToast(`⏱️ ${st.code} extended by +${addMins}m`);
+    }
+
+    function cyclePlayersMidSession(id) {
+      const st = stations.find(s => s.id === id);
+      if (!st || st.status === "IDLE") return;
+      st.players = (Number(st.players) % 4) + 1;
+      st.updatedAt = Date.now();
+      renderStations();
+      saveState(true, false);
+      showToast(`👥 ${st.code} updated to ${st.players}P`);
+    }
+
+    function resetStationObjectToIdle(st) {
+      st.status = "IDLE";
+      st.customer = "";
+      st.players = 1;
+      st.durationMins = 60;
+      st.advancePaid = false;
+      st.startTime = null;
+      st.pausedElapsedMs = 0;
+      st.snacks = [];
+      st.warned5m = false;
+      st.warnedEnd = false;
+      st.updatedAt = Date.now();
+    }
+
+    function promptResetStation(id) {
+      const st = stations.find(s => s.id === id);
+      if (!st) return;
+      openConfirmDialog(
+        `Reset ${st.code}?`,
+        `Cancel the current running session on ${st.code} (${st.customer || "Walk-in"}) without logging a bill?`,
+        () => {
+          resetStationObjectToIdle(st);
+          renderStations();
+          updateKPIs();
+          saveState(true, false);
+          showToast(`↺ ${st.code} reset to Available`);
+        }
+      );
+    }
+
+    // Station Transfer Modal
+    function openMoveModal(id) {
+      activeMoveStationId = id;
+      const source = stations.find(s => s.id === id);
+      if (!source) return;
+
+      document.getElementById("moveModalTitle").textContent = `⇄ Move ${source.code} Session`;
+      const container = document.getElementById("moveTargetsContainer");
+      const idleStations = stations.filter(s => s.status === "IDLE" && s.id !== id);
+
+      if (idleStations.length === 0) {
+        container.innerHTML = `<div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-amber-300 text-center">All other PS5 stations are currently busy!</div>`;
+      } else {
+        container.innerHTML = idleStations.map(target => `
+          <button
+            onclick="executeStationTransfer(${target.id})"
+            class="w-full p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-sky-500/30 flex items-center justify-between transition"
+          >
+            <span class="font-display font-bold text-sm text-white">Move to ${target.code}</span>
+            <span class="text-xs font-mono text-emerald-400">● AVAILABLE →</span>
+          </button>
+        `).join("");
+      }
+      openModal("moveModal");
+    }
+
+    function executeStationTransfer(targetId) {
+      const source = stations.find(s => s.id === activeMoveStationId);
+      const target = stations.find(s => s.id === targetId);
+      if (!source || !target || target.status !== "IDLE") return;
+
+      target.status = source.status;
+      target.customer = source.customer;
+      target.game = source.game;
+      target.players = source.players;
+      target.durationMins = source.durationMins;
+      target.advancePaid = source.advancePaid;
+      target.startTime = source.startTime;
+      target.pausedElapsedMs = source.pausedElapsedMs;
+      target.snacks = [...(source.snacks || [])];
+      target.warned5m = source.warned5m;
+      target.warnedEnd = source.warnedEnd;
+      target.updatedAt = Date.now();
+
+      resetStationObjectToIdle(source);
+      closeModal("moveModal");
+      renderStations();
+      updateKPIs();
+      saveState(true, false);
+      showToast(`⇄ Transferred session from ${source.code} to ${target.code}`);
+    }
+
+    /*************************************************************************
+     * 8. SNACKS & DRINKS MODAL (PRESETS + CUSTOM ITEM)
+     *************************************************************************/
+    function openSnackModal(id) {
+      activeSnackStationId = id;
+      const st = stations.find(s => s.id === id);
+      if (!st) return;
+      document.getElementById("snackModalTitle").textContent = `🍿 Snacks & Add-ons • ${st.code}`;
+      document.getElementById("customSnackName").value = "";
+      document.getElementById("customSnackPrice").value = "";
+      renderSnackModalList();
+      openModal("snackModal");
+    }
+
+    function addSnackToStation(name, price) {
+      const st = stations.find(s => s.id === activeSnackStationId);
+      if (!st) return;
+      st.snacks.push({ name, price: Number(price) || 0 });
+      st.updatedAt = Date.now();
+      renderSnackModalList();
+      renderStations();
+      saveState(true, false);
+      showToast(`🍿 Added ${name} (+₹${price}) to ${st.code}`);
+    }
+
+    function addCustomSnack() {
+      const nameEl = document.getElementById("customSnackName");
+      const priceEl = document.getElementById("customSnackPrice");
+      const name = (nameEl.value || "").trim() || "Custom Add-on";
+      const price = Math.max(1, Number(priceEl.value) || 0);
+      if (!priceEl.value || price <= 0) {
+        showToast("⚠️ Enter a valid ₹ price for the custom item");
+        return;
+      }
+      addSnackToStation(name, price);
+      nameEl.value = "";
+      priceEl.value = "";
+    }
+
+    function removeSnackFromStation(idx) {
+      const st = stations.find(s => s.id === activeSnackStationId);
+      if (!st) return;
+      st.snacks.splice(idx, 1);
+      st.updatedAt = Date.now();
+      renderSnackModalList();
+      renderStations();
+      saveState(true, false);
+    }
+
+    function renderSnackModalList() {
+      const st = stations.find(s => s.id === activeSnackStationId);
+      const listEl = document.getElementById("snackItemsList");
+      if (!st || !st.snacks.length) {
+        listEl.innerHTML = `<div class="text-xs text-slate-500 py-2 text-center">No snacks or drinks added to this session yet.</div>`;
+        return;
+      }
+      listEl.innerHTML = st.snacks.map((item, i) => `
+        <div class="flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+          <span class="text-white font-medium">${escapeHtml(item.name)}</span>
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-amber-300 font-bold">₹${item.price}</span>
+            <button onclick="removeSnackFromStation(${i})" class="text-red-400 hover:text-red-300 font-bold px-1">✕</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    /*************************************************************************
+     * 9. SMART CHECKOUT MODAL (CRASH-PROOF UI-FIRST ORDER + SPLIT UPI/CASH)
+     *************************************************************************/
+    function openCheckoutModal(id) {
+      activeCheckoutStationId = id;
+      const st = stations.find(s => s.id === id);
+      if (!st) return;
+
+      const bill = getStationBill(st);
+      document.getElementById("chkTitle").textContent = `💳 Checkout • ${st.code}`;
+      document.getElementById("chkSubtitle").textContent = `${st.durationMins > 0 ? st.durationMins + "m Package" : "Open Stopwatch"} • Played ${bill.elapsedMins}m`;
+      document.getElementById("chkCustGame").textContent = `${st.customer || "Walk-in Player"} (${st.game})`;
+      document.getElementById("chkPlayersTime").textContent = `${st.players}P • Billed ${bill.billableMins}m`;
+      document.getElementById("chkGamingCost").textContent = `₹${bill.gamingCharge}`;
+      document.getElementById("chkSnacksCost").textContent = `₹${bill.snacksTotal}`;
+      document.getElementById("chkAdvanceDed").textContent = `-₹${bill.advanceDed}`;
+      document.getElementById("chkFinalInput").value = bill.netPayable;
+
+      // Reset split section
+      const splitBox = document.getElementById("splitBox");
+      splitBox.classList.add("hidden");
+      const halfCash = Math.floor(bill.netPayable / 2);
+      document.getElementById("splitCashInput").value = halfCash;
+      document.getElementById("splitUpiInput").value = bill.netPayable - halfCash;
+
+      updateUpiQrCode(bill.netPayable);
+      openModal("checkoutModal");
+    }
+
+    function updateUpiQrCode(amountINR) {
+      const amt = Math.max(0, Math.round(Number(amountINR) || 0));
+      const badge = document.getElementById("qrAmtBadge");
+      if (badge) badge.textContent = `₹${amt}`;
+      const upiUri = `upi://pay?pa=${OFFICIAL_UPI_ID}&pn=${encodeURIComponent(OFFICIAL_PAYEE_NAME)}&am=${amt}&cu=INR`;
+      const qrImg = document.getElementById("chkQrImg");
+      if (qrImg) {
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUri)}`;
+      }
+    }
+
+    function onFinalPayableInput() {
+      const total = Math.max(0, Number(document.getElementById("chkFinalInput").value) || 0);
+      const splitBox = document.getElementById("splitBox");
+      if (!splitBox.classList.contains("hidden")) {
+        const cash = Math.min(total, Math.max(0, Number(document.getElementById("splitCashInput").value) || 0));
+        const upi = Math.max(0, total - cash);
+        document.getElementById("splitUpiInput").value = upi;
+        updateUpiQrCode(upi);
+      } else {
+        updateUpiQrCode(total);
+      }
+    }
+
+    function toggleSplitBox() {
+      const splitBox = document.getElementById("splitBox");
+      const total = Math.max(0, Number(document.getElementById("chkFinalInput").value) || 0);
+      if (splitBox.classList.contains("hidden")) {
+        splitBox.classList.remove("hidden");
+        const cash = Math.floor(total / 2);
+        const upi = total - cash;
+        document.getElementById("splitCashInput").value = cash;
+        document.getElementById("splitUpiInput").value = upi;
+        updateUpiQrCode(upi);
+      } else {
+        splitBox.classList.add("hidden");
+        updateUpiQrCode(total);
+      }
+    }
+
+    function onSplitCashChange() {
+      const total = Math.max(0, Number(document.getElementById("chkFinalInput").value) || 0);
+      const cash = Math.min(total, Math.max(0, Number(document.getElementById("splitCashInput").value) || 0));
+      const upi = Math.max(0, total - cash);
+      document.getElementById("splitUpiInput").value = upi;
+      updateUpiQrCode(upi);
+    }
+
+    function onSplitUpiChange() {
+      const total = Math.max(0, Number(document.getElementById("chkFinalInput").value) || 0);
+      const upi = Math.min(total, Math.max(0, Number(document.getElementById("splitUpiInput").value) || 0));
+      const cash = Math.max(0, total - upi);
+      document.getElementById("splitCashInput").value = cash;
+      updateUpiQrCode(upi);
+    }
+
+    function copyUpiId() {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = OFFICIAL_UPI_ID;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast(`📋 Copied ${OFFICIAL_UPI_ID}`);
+      } catch (e) {}
+    }
+
+    // CRITICAL FIX: Reset Station & Re-Render UI IMMEDIATELY BEFORE storage/cloud calls
+    function completeCheckout(method) {
+      const st = stations.find(s => s.id === activeCheckoutStationId);
+      if (!st) {
+        closeModal("checkoutModal");
+        return;
+      }
+
+      const bill = getStationBill(st);
+      const finalPayable = Math.max(0, Math.round(Number(document.getElementById("chkFinalInput").value) || 0));
+
+      let upiPaid = 0;
+      let cashPaid = 0;
+      if (method === "UPI") {
+        upiPaid = finalPayable;
+      } else if (method === "CASH") {
+        cashPaid = finalPayable;
+      } else if (method === "SPLIT") {
+        cashPaid = Math.max(0, Math.round(Number(document.getElementById("splitCashInput").value) || 0));
+        upiPaid = Math.max(0, Math.round(Number(document.getElementById("splitUpiInput").value) || 0));
+      }
+
+      const totalPaid = method === "SPLIT" ? (upiPaid + cashPaid) : finalPayable;
+      const stationCode = st.code;
+
+      const txRecord = {
+        id: Date.now(),
+        dateKey: getTodayDateKey(),
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        station: stationCode,
+        customer: st.customer || "Walk-in Player",
+        game: st.game,
+        players: st.players,
+        mins: bill.billableMins,
+        snacksTotal: bill.snacksTotal,
+        advanceDed: bill.advanceDed,
+        method, // UPI | CASH | SPLIT
+        upiAmount: upiPaid,
+        cashAmount: cashPaid,
+        amount: totalPaid
+      };
+
+      // 1. Add bill to ledger & reset station in memory
+      ledger.unshift(txRecord);
+      resetStationObjectToIdle(st);
+      activeCheckoutStationId = null;
+
+      // 2. IMMEDIATELY close modal and update DOM so station never gets stuck
+      closeModal("checkoutModal");
+      renderStations();
+      renderLedger();
+      updateKPIs();
+      playSound("start");
+      showToast(`✅ ${stationCode} billed ₹${totalPaid} (${method})`);
+
+      // 3. Persist to safe localStorage & push to Firebase asynchronously
+      saveState(true, true);
+    }
+
+    /*************************************************************************
+     * 10. 1-SECOND HEARTBEAT LOOP (DIRECT DOM UPDATES ONLY)
+     *************************************************************************/
+    function formatHMS(ms) {
+      const totalSeconds = Math.floor(Math.abs(ms) / 1000);
+      const h = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+      const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+      const s = String(totalSeconds % 60).padStart(2, "0");
+      return `${h}:${m}:${s}`;
+    }
+
+    function updateLiveClocks() {
+      const clockHeader = document.getElementById("liveClock");
+      if (clockHeader) {
+        clockHeader.textContent = new Date().toLocaleTimeString("en-IN", { hour12: true });
+      }
+
+      stations.forEach(st => {
+        if (st.status === "IDLE") return;
+
+        const clockEl = document.getElementById(`clock-${st.id}`);
+        const barEl = document.getElementById(`bar-${st.id}`);
+        const cardEl = document.getElementById(`card-${st.id}`);
+        const badgeEl = document.getElementById(`badge-${st.id}`);
+        const billEl = document.getElementById(`bill-${st.id}`);
+        if (!clockEl) return;
+
+        const bill = getStationBill(st);
+        if (billEl) billEl.textContent = `₹${bill.netPayable}`;
+
+        if (st.durationMins === 0) {
+          // Open Stopwatch
+          clockEl.textContent = formatHMS(bill.elapsedMs);
+          if (barEl) barEl.style.width = "100%";
+        } else {
+          // Fixed Countdown
+          const targetMs = Number(st.durationMins) * 60000;
+          const remainingMs = targetMs - bill.elapsedMs;
+          const pct = Math.max(0, Math.min(100, (remainingMs / targetMs) * 100));
+          if (barEl) barEl.style.width = `${pct}%`;
+
+          if (remainingMs <= 0) {
+            clockEl.textContent = `+${formatHMS(remainingMs)}`;
+            clockEl.className = "font-mono font-extrabold text-3xl md:text-4xl text-red-400 tracking-wider my-1";
+            if (cardEl) cardEl.className = "glass st-over rounded-2xl p-4 flex flex-col justify-between gap-3.5 transition";
+            if (badgeEl && st.status !== "PAUSED") {
+              badgeEl.textContent = "⏰ TIME UP / OVERTIME";
+              badgeEl.className = "px-2.5 py-1 rounded-full bg-red-500/20 text-red-300 border border-red-500/40 text-[10px] font-mono font-bold";
+            }
+            if (!st.warnedEnd) {
+              st.warnedEnd = true;
+              playSound("over");
+              showToast(`⏰ TIME UP on ${st.code}!`);
+              safeSetItem(STORAGE_KEYS.STATIONS, JSON.stringify(stations));
+            }
+          } else if (remainingMs <= 5 * 60000) {
+            clockEl.textContent = formatHMS(remainingMs);
+            clockEl.className = "font-mono font-extrabold text-3xl md:text-4xl text-amber-300 tracking-wider my-1";
+            if (cardEl) cardEl.className = "glass st-warn rounded-2xl p-4 flex flex-col justify-between gap-3.5 transition";
+            if (badgeEl && st.status !== "PAUSED") {
+              badgeEl.textContent = "⚠️ < 5M LEFT";
+              badgeEl.className = "px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold";
+            }
+            if (!st.warned5m) {
+              st.warned5m = true;
+              playSound("warn");
+              showToast(`⚠️ Less than 5 minutes left on ${st.code}`);
+              safeSetItem(STORAGE_KEYS.STATIONS, JSON.stringify(stations));
+            }
+          } else {
+            clockEl.textContent = formatHMS(remainingMs);
+            clockEl.className = "font-mono font-extrabold text-3xl md:text-4xl text-sky-300 tracking-wider my-1";
+            if (cardEl) cardEl.className = "glass st-active rounded-2xl p-4 flex flex-col justify-between gap-3.5 transition";
+          }
+        }
+      });
+
+      updateKPIs();
+    }
+
+    /*************************************************************************
+     * 11. KPI STRIP & TODAY'S COMPLETED BILLS LEDGER
+     *************************************************************************/
+    function updateKPIs() {
+      const activeStations = stations.filter(s => s.status !== "IDLE");
+      const livePlayers = activeStations.reduce((sum, s) => sum + (Number(s.players) || 0), 0);
+      const runningTab = activeStations.reduce((sum, s) => sum + getStationBill(s).netPayable, 0);
+
+      let totalRevenue = 0;
+      let upiTotal = 0;
+      let cashTotal = 0;
+
+      ledger.forEach(tx => {
+        const amt = Number(tx.amount) || 0;
+        totalRevenue += amt;
+        if (tx.method === "UPI") {
+          upiTotal += amt;
+        } else if (tx.method === "CASH") {
+          cashTotal += amt;
+        } else if (tx.method === "SPLIT") {
+          upiTotal += Number(tx.upiAmount) || 0;
+          cashTotal += Number(tx.cashAmount) || 0;
+        }
+      });
+
+      document.getElementById("kpiActive").textContent = `${activeStations.length} / 4`;
+      document.getElementById("kpiPlayers").textContent = `${livePlayers} Players Live`;
+      document.getElementById("kpiRunning").textContent = `₹${runningTab}`;
+      document.getElementById("kpiRevenue").textContent = `₹${totalRevenue}`;
+      document.getElementById("kpiSplit").textContent = `UPI: ₹${upiTotal} • Cash: ₹${cashTotal}`;
+      document.getElementById("kpiSessions").textContent = String(ledger.length);
+      document.getElementById("kpiDateLabel").textContent = getTodayDateKey();
+    }
+
+    function renderLedger() {
+      const tbody = document.getElementById("ledgerBody");
+      const query = (document.getElementById("ledgerSearch")?.value || "").trim().toLowerCase();
+
+      const filtered = ledger.filter(tx => {
+        if (!query) return true;
+        const haystack = `${tx.station} ${tx.customer} ${tx.game} ${tx.method} ${tx.time}`.toLowerCase();
+        return haystack.includes(query);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="py-6 text-center text-slate-500 text-xs">
+              ${ledger.length === 0 ? "No completed sessions recorded today yet." : "No matching bills found for your search."}
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(tx => {
+        let modeBadge = "";
+        if (tx.method === "UPI") {
+          modeBadge = `<span class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono text-[10px] font-bold">UPI</span>`;
+        } else if (tx.method === "CASH") {
+          modeBadge = `<span class="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono text-[10px] font-bold">CASH</span>`;
+        } else {
+          modeBadge = `<span class="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 font-mono text-[10px] font-bold">SPLIT (U:₹${tx.upiAmount || 0} + C:₹${tx.cashAmount || 0})</span>`;
+        }
+
+        return `
+          <tr class="hover:bg-slate-900/50 transition">
+            <td class="py-2.5 px-2 font-mono text-slate-400">${escapeHtml(tx.time)}</td>
+            <td class="py-2.5 px-2 font-display font-bold text-sky-400">${escapeHtml(tx.station)}</td>
+            <td class="py-2.5 px-2">
+              <span class="font-semibold text-white">${escapeHtml(tx.customer)}</span>
+              <span class="text-slate-400 text-[11px]"> • ${escapeHtml(tx.game)}</span>
+            </td>
+            <td class="py-2.5 px-2 font-mono text-slate-300">${tx.players}P • ${tx.mins}m</td>
+            <td class="py-2.5 px-2 font-mono text-amber-300">₹${tx.snacksTotal || 0}</td>
+            <td class="py-2.5 px-2">${modeBadge}</td>
+            <td class="py-2.5 px-2 text-right font-mono font-extrabold text-emerald-400">₹${tx.amount}</td>
+            <td class="py-2.5 px-2 text-center">
+              <button onclick="deleteLedgerRow('${tx.id}')" title="Delete Entry" class="text-slate-500 hover:text-red-400 font-bold px-1.5">✕</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function deleteLedgerRow(txId) {
+      openConfirmDialog(
+        "Delete Bill Entry?",
+        "Remove this transaction from today's completed revenue ledger?",
+        () => {
+          ledger = ledger.filter(item => String(item.id) !== String(txId));
+          renderLedger();
+          updateKPIs();
+          saveState(false, true);
+          showToast("🗑️ Deleted bill entry");
+        }
+      );
+    }
+
+    function openClearDayConfirm() {
+      if (ledger.length === 0) {
+        showToast("Ledger is already empty.");
+        return;
+      }
+      openConfirmDialog(
+        "Clear Today's Ledger?",
+        "This will clear all completed bills for today from the counter screen and update Firebase.",
+        () => {
+          ledger = [];
+          renderLedger();
+          updateKPIs();
+          saveState(false, true);
+          showToast("🗑️ Cleared today's completed bills");
+        }
+      );
+    }
+
+    function exportCSV() {
+      if (ledger.length === 0) {
+        showToast("⚠️ No completed bills to export yet.");
+        return;
+      }
+      const headers = ["Date", "Time", "Station", "Customer", "Game", "Players", "Duration(m)", "Snacks(INR)", "Method", "UPI(INR)", "Cash(INR)", "TotalPaid(INR)"];
+      const rows = ledger.map(tx => [
+        tx.dateKey || getTodayDateKey(),
+        tx.time,
+        tx.station,
+        `"${String(tx.customer || "").replace(/"/g, '""')}"`,
+        `"${String(tx.game || "").replace(/"/g, '""')}"`,
+        tx.players,
+        tx.mins,
+        tx.snacksTotal || 0,
+        tx.method,
+        tx.upiAmount ?? (tx.method === "UPI" ? tx.amount : 0),
+        tx.cashAmount ?? (tx.method === "CASH" ? tx.amount : 0),
+        tx.amount
+      ]);
+      const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `RESPAWNX_POS_${getTodayDateKey()}.csv`;
+      link.click();
+      showToast("📥 Exported CSV report");
+    }
+
+    /*************************************************************************
+     * 12. MODALS & CLOUD CONFIGURATION HELPERS
+     *************************************************************************/
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove("hidden");
+      el.classList.add("flex");
+    }
+
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add("hidden");
+      el.classList.remove("flex");
+    }
+
+    function openCloudModal() {
+      document.getElementById("fbUrlInput").value = firebaseUrl;
+      document.getElementById("cloudDateKeyPreview").textContent = getTodayDateKey();
+      openModal("cloudModal");
+    }
+
+    function restoreDefaultFirebaseUrl() {
+      firebaseUrl = DEFAULT_FIREBASE_URL;
+      document.getElementById("fbUrlInput").value = firebaseUrl;
+      safeSetItem(STORAGE_KEYS.FB_URL, firebaseUrl);
+      pushAllToFirebase(true);
+    }
+
+    function saveFirebaseUrlFromModal() {
+      const raw = (document.getElementById("fbUrlInput").value || "").trim().replace(/\/+$/, "");
+      firebaseUrl = raw || DEFAULT_FIREBASE_URL;
+      safeSetItem(STORAGE_KEYS.FB_URL, firebaseUrl);
+      pushAllToFirebase(true);
+      closeModal("cloudModal");
+    }
+
+    function openConfirmDialog(title, message, onConfirm) {
+      document.getElementById("confirmTitle").textContent = title;
+      document.getElementById("confirmMessage").textContent = message;
+      const btn = document.getElementById("confirmActionBtn");
+      btn.onclick = () => {
+        closeModal("confirmModal");
+        if (typeof onConfirm === "function") onConfirm();
+      };
+      openModal("confirmModal");
+    }
+
+    /*************************************************************************
+     * 13. INITIALIZE APPLICATION ON LOAD
+     *************************************************************************/
+    window.onload = function () {
+      renderStations();
+      renderLedger();
+      updateKPIs();
+      setInterval(updateLiveClocks, 1000);
+      loadTodayTransactionsFromCloudOnBoot();
+      pushStationsToFirebase();
+    };
+  </script>
+</body>
+</html>
